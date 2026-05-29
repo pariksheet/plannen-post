@@ -1,0 +1,9 @@
+{
+  "name": "plannen-post",
+  "description": "Compose a personalised morning newspaper from MCP tools and deliver it to Gmail and Telegram.",
+  "version": "0.1.0",
+  "author": {
+    "name": "stroomnova"
+  },
+  "license": "MIT"
+}

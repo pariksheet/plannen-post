@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Plannen Post</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=JetBrains+Mono:wght@500&family=Lora:ital,wght@0,400;1,400;1,500&family=Roboto+Slab:wght@900&display=swap" rel="stylesheet">
+  <style>
+    /* ---------- palette + base ------------------------------------------ */
+    :root {
+      --paper:   #f1ebd9;
+      --ink:     #1a1a1a;
+      --faint:   #7a7368;
+      --rule:    #b6ab9a;
+      --weather: #d6e7f7;
+      --sticky:  #fef4a8;
+      --chip-pink:  #f4c4c4;  /* reserved for future event-chip render */
+      --chip-blue:  #c0d8f4;
+      --chip-green: #c8e6c8;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: 'Lora', Georgia, 'Times New Roman', serif;
+      font-style: italic;
+      font-size: 15px;
+      line-height: 1.5;
+      padding: 32px 48px 24px;
+    }
+
+    /* ---------- top bar -------------------------------------------------- */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      font-style: italic;
+      color: var(--faint);
+      font-size: 13px;
+    }
+    .top-bar .layout-tag {
+      display: flex; gap: 12px; align-items: flex-start;
+      font-style: normal;
+    }
+    .top-bar .layout-tag .mono { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); line-height: 1.2; }
+    .top-bar .layout-tag .hand { font-family: 'Caveat', 'Comic Sans MS', cursive; font-weight: 500; font-style: normal; font-size: 22px; line-height: 1.0; max-width: 160px; color: var(--ink); }
+
+    /* ---------- masthead ------------------------------------------------- */
+    .masthead { text-align: center; margin-top: 4px; }
+    .masthead h1 {
+      font-family: 'Roboto Slab', 'Georgia', serif;
+      font-weight: 900;
+      font-style: normal;
+      font-size: 72px;
+      line-height: 1.0;
+      letter-spacing: -0.01em;
+      margin: 0;
+    }
+    .masthead .dateline {
+      margin-top: 6px;
+      font-style: italic;
+      font-size: 14px;
+      color: #2a2a2a;
+    }
+
+    .vol-bar {
+      display: flex; justify-content: space-between; align-items: flex-end;
+      margin-top: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--faint);
+    }
+    .vol-bar .vol-no, .vol-bar .est { line-height: 1.3; }
+    .vol-bar .strike { text-decoration: line-through; text-decoration-color: var(--faint); }
+
+    hr.rule-thin {
+      border: none; border-top: 1px solid var(--ink);
+      margin: 10px 0 24px;
+    }
+
+    /* ---------- column grid --------------------------------------------- */
+    .columns {
+      display: grid;
+      grid-template-columns: 1fr 1.7fr 1fr;
+      gap: 36px;
+    }
+    @media (max-width: 900px) {
+      .columns { grid-template-columns: 1fr; gap: 24px; }
+      body { padding: 24px 20px; }
+      .masthead h1 { font-size: 48px; }
+    }
+
+    .col { min-width: 0; }
+
+    /* ---------- section primitives -------------------------------------- */
+    .post-section { margin-bottom: 28px; }
+    .post-section .kicker {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--faint);
+      font-style: normal;
+      margin-bottom: 4px;
+    }
+    .post-section h2.hand,
+    .post-section h3.hand {
+      font-family: 'Caveat', 'Comic Sans MS', cursive;
+      font-weight: 500; font-style: normal;
+      color: var(--ink);
+      line-height: 1.15;
+      margin: 0;
+    }
+    .post-section h2.hand { font-size: 26px; }
+    .post-section h3.hand { font-size: 22px; }
+    .post-section hr.dashed {
+      border: none;
+      border-top: 1.5px dashed var(--rule);
+      margin: 8px 0 10px;
+    }
+    .post-section .body p { margin: 0 0 10px; }
+    .post-section .body p:last-child { margin-bottom: 0; }
+    .post-section .body ul {
+      list-style: none; padding: 0; margin: 0 0 10px;
+    }
+    .post-section .body ul li {
+      padding-left: 18px; position: relative;
+      margin-bottom: 6px;
+    }
+    .post-section .body ul li::before {
+      content: "→";
+      position: absolute; left: 0; top: 0;
+      font-style: normal; color: var(--ink);
+    }
+    .post-section .body .faint {
+      color: var(--faint); font-size: 13px;
+    }
+
+    /* ---------- per-section accents ------------------------------------- */
+
+    /* intro = lead story: oversized handwritten headline */
+    .post-section--intro .kicker::before { content: "↳ "; }
+    .post-section--intro h2.hand { font-size: 44px; line-height: 1.0; margin-bottom: 6px; }
+    .post-section--intro .byline {
+      font-size: 13px; color: var(--faint); font-style: italic;
+      margin: 4px 0 14px;
+    }
+
+    /* weather = blue panel */
+    .post-section--weather {
+      background: var(--weather);
+      border-radius: 4px;
+      padding: 12px 14px;
+    }
+    .post-section--weather hr.dashed { display: none; }
+    .post-section--weather h2.hand { font-size: 24px; margin-top: 2px; }
+    .post-section--weather .body { font-size: 14px; margin-top: 6px; }
+
+    /* email/inbox = arrow bullets (default ul style above already does this) */
+    .post-section--email h2.hand { font-size: 22px; }
+
+    /* events = left-column day list */
+    .post-section--events h2.hand { font-size: 22px; }
+
+    /* outro = sticky note, slight rotation, no kicker */
+    .post-section--outro {
+      background: var(--sticky);
+      padding: 14px 16px 16px;
+      transform: rotate(-1.2deg);
+      box-shadow: 1px 2px 6px rgba(0,0,0,0.06);
+      margin-top: 12px;
+    }
+    .post-section--outro .kicker { color: #6a5a00; }
+    .post-section--outro h2.hand { font-size: 24px; margin-bottom: 4px; }
+    .post-section--outro hr.dashed { display: none; }
+    .post-section--outro .body { font-size: 14px; }
+
+    /* ---------- footer --------------------------------------------------- */
+    .footer {
+      display: flex; justify-content: space-between;
+      margin-top: 32px;
+      font-style: italic;
+      font-size: 12px;
+      color: var(--faint);
+    }
+
+    /* Skipped sections leave their slot empty — visually transparent */
+  </style>
+</head>
+<body>
+
+  <div class="dc-card">
+
+    <div class="top-bar">
+      <div class="layout-tag">
+        <span class="mono">LAYOUT<br>A1</span>
+        <span class="hand">Classic three-<br>column</span>
+      </div>
+      <span>balanced &middot; the dependable default</span>
+    </div>
+
+    <header class="masthead">
+      <h1>THE PLANNEN POST</h1>
+      <div class="dateline"><!-- {{masthead.dateline}} --></div>
+      <div class="vol-bar">
+        <span class="vol-no">VOL. 1 &middot; NO.<br><span class="strike"><!-- {{masthead.issue}} --></span></span>
+        <span class="est">EST. THIS<br>MORNING</span>
+      </div>
+    </header>
+
+    <hr class="rule-thin">
+
+    <main class="columns">
+
+      <div class="col col-left">
+        <!-- {{events}} -->
+      </div>
+
+      <div class="col col-center">
+        <!-- {{intro}} -->
+      </div>
+
+      <div class="col col-right">
+        <!-- {{weather}} -->
+        <!-- {{email}} -->
+        <!-- {{outro}} -->
+      </div>
+
+    </main>
+
+    <footer class="footer">
+      <span>continued inside &middot; p.2 calendar &middot; p.3 long reads &middot; p.4 leftovers</span>
+      <span>printed fresh at <!-- {{masthead.printed}} --></span>
+    </footer>
+
+  </div>
+
+</body>
+</html>
