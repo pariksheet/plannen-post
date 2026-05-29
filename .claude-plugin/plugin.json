@@ -1,9 +1,10 @@
 {
   "name": "plannen-post",
-  "description": "Compose a personalised morning newspaper from MCP tools and deliver it to Gmail and Telegram.",
+  "description": "Compose a personalised morning newspaper from MCP tools, web search, and HTTP sources; render it as a styled edition; deliver to Gmail / WhatsApp / Telegram / print.",
   "version": "0.1.0",
   "author": {
-    "name": "stroomnova"
+    "name": "Pari",
+    "email": "pbarapatre@gmail.com"
   },
   "license": "MIT"
 }

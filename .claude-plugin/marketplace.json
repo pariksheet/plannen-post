@@ -1,0 +1,28 @@
+{
+  "name": "plannen-post",
+  "owner": {
+    "name": "Pari",
+    "email": "pbarapatre@gmail.com"
+  },
+  "description": "A personalised morning newspaper, composed from your connected MCP tools and delivered to the channels you choose.",
+  "plugins": [
+    {
+      "name": "plannen-post",
+      "source": {
+        "source": "github",
+        "repo": "pariksheet/plannen-post"
+      },
+      "description": "Compose a personalised morning newspaper from MCP tools, web search, and HTTP sources; render it as a styled edition; deliver to Gmail / WhatsApp / Telegram / print as HTML, PNG, or text.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Pari",
+        "email": "pbarapatre@gmail.com"
+      },
+      "homepage": "https://github.com/pariksheet/plannen-post",
+      "repository": "https://github.com/pariksheet/plannen-post",
+      "license": "MIT",
+      "category": "productivity",
+      "tags": ["newspaper", "briefing", "digest", "mcp", "automation", "daily"]
+    }
+  ]
+}

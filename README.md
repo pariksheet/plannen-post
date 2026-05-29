@@ -29,13 +29,23 @@ Connected MCPs need no binding (they own their auth), so on an all-MCP setup the
 
 ## Install
 
-Clone or place this directory anywhere on disk. Then in any Claude Code session:
+In any Claude Code session, add the marketplace and install the plugin:
+
+```text
+/plugin marketplace add pariksheet/plannen-post
+/plugin install plannen-post@plannen-post
+```
+
+That's it — no clone, no flags. The plugin's commands are namespaced
+`/plannen-post:…`, and you'll get updates when the marketplace refreshes.
+
+**Developing the plugin?** Run it straight from a local checkout instead:
 
 ```bash
 claude --plugin-dir /path/to/plannen-post
 ```
 
-For development edits, `/reload-plugins` picks up changes without restarting.
+`/reload-plugins` picks up local edits without restarting.
 
 ## Quickstart (recommended)
 
