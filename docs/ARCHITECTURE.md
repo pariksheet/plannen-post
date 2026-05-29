@@ -5,8 +5,8 @@
 
 A Claude Code plugin that composes a personalised "newspaper" from data the user
 can already reach, renders it into a styled HTML edition, and delivers it to one
-or more channels in the user's chosen format. Stateless compute, a single
-portable config file, no database, no server.
+or more channels in the user's chosen format. Stateless compute plus a rolling
+7-day local working memory, a single portable config file, no database, no server.
 
 ---
 
@@ -27,7 +27,9 @@ portable config file, no database, no server.
   Setup introspects your connected MCPs and scaffolds the rest.
 
 ### Non-goals (v2)
-- No database, no web service, no hosted backend. Channels are the archive.
+- No database, no web service, no hosted backend. Channels are the *permanent*
+  archive; the only local state is a bounded, rolling 7-day working memory (§9a)
+  — a cache, not a datastore.
 - No bundled heavyweight renderers (chromium, etc.). Rendering to PDF/PNG is a
   *connected capability*, not a shipped dependency.
 - No auto-send of irreversible actions without the user's channel config saying so.
@@ -53,6 +55,10 @@ portable config file, no database, no server.
 6. **Capability-gated with graceful degradation.** Probe a capability; use it if
    present; otherwise fall back per a declared order and warn. Tomorrow's edition
    is the retry.
+7. **Short, bounded memory — not a database.** Each edition is persisted as a
+   rendered artifact plus a structured sidecar, kept for the last 7 editions only
+   (§9a). Memory exists for *continuity* (dedup, callbacks, escalation), never as a
+   queryable store. Local-only, never shared.
 
 ---
 
@@ -61,7 +67,11 @@ portable config file, no database, no server.
 ```
 sources ─▶ config ─▶ html template ─▶ rendering ─▶ delivery
 (data in)  (intent)   (theme + kit)   (compose +    (sinks,
-                                       assemble)     formats)
+                                  ▲    assemble)     formats)
+                                  │         │
+                         working memory ◀───┘
+                         (last 7 editions: HTML + JSON sidecar)
+                         read for continuity · written each run
 ```
 
 | Stage | What it is |
@@ -156,10 +166,13 @@ PASS 1 — editorial judgment (LLM):
   • write prose per section under its hint (≤ limits, factual, no marketing)
   • decide the lead / ordering by importance
   • improvise dynamic-zone sections when new info warrants
+  • read the previous edition's sidecar from working memory (§9a) for
+    continuity — what was surfaced before, what's still open
   • OUTPUT: a structured section-plan, e.g.
       [{ id: sport, component: card, slot: dynamic,
          kicker: "SPORT", body: "...", }, ...]
     plus masthead variables (dateline, issue no., printed time)
+    This plan IS the sidecar persisted to working memory (§9a) — free reuse.
 
 PASS 2 — assembly (deterministic, no LLM):
   • for each planned section, render its component's HTML with inline styles
@@ -234,6 +247,55 @@ what makes running a stranger's config safe.
 
 ---
 
+## 9a. Working memory (rolling 7-day)
+
+A bounded local cache that gives the paper continuity without becoming a database.
+Local-only, never shared (same trust class as the profile).
+
+**Layout** — two files per edition, dated:
+
+```
+~/.post/memory/
+  2026-05-29.html     ← rendered edition (human artifact / local archive)
+  2026-05-29.json     ← structured sidecar (machine memory) = the Pass-1 plan
+  2026-05-28.html
+  2026-05-28.json
+  …                   ← keep the last 7 editions; prune older on each run
+```
+
+**The sidecar is the Pass-1 section-plan** (§7) plus a few continuity facts — we
+get it for free, no extra LLM work. It exists so the next morning's render can
+reason precisely instead of re-parsing yesterday's HTML. Illustrative shape:
+
+```json
+{
+  "date": "2026-05-29",
+  "weather": { "headline": "Rain", "pollen_grass": "high" },
+  "inbox_surfaced": ["thread_id_a", "thread_id_b"],
+  "open_items": [{ "thread_id": "x", "who": "Silvia (EC)", "shown_count": 3 }]
+}
+```
+
+**What it buys**
+- **Exact look-back windows.** A source's "since last edition" resolves to the
+  date of the newest file in `memory/` — so Monday automatically reaches back to
+  Friday, and a skipped day is covered. No schedule-guessing.
+- **Dedup + escalation.** Knowing a thread was surfaced N times and is still open
+  lets the paper stop repeating once acted on, or escalate ("3rd day waiting"),
+  instead of dumbly re-listing.
+- **Callbacks / trends.** "Third day of high grass pollen," "yesterday's rain
+  clears by noon."
+
+**Bounds (deliberate)**
+- Last **7 editions**, rolling; older files pruned each run.
+- A *cache*, not a queryable store — read the most recent 1–7 sidecars for
+  continuity, nothing more.
+- Local-only; never shared, never part of the portable config.
+- The permanent human archive is still the delivery **channels** — memory is
+  short-term working context, not the record of record.
+
+---
+
 ## 10. Setup & onboarding
 
 Skills/plugins have no executable install hook, so onboarding is a
@@ -272,9 +334,10 @@ fragility that v1's curl+token delivery suffers from.
 - **WhatsApp/Telegram as *input*:** reading a group chat to digest it needs
   read-capable access the current send-only `whatsapp-notify` doesn't provide.
   Different (harder) integration than delivery; revisit.
-- **"On this day" / self-recall:** read past editions back from the channel
-  archive (e.g. Gmail) to surface patterns — keeps the no-DB stance while adding
-  light memory.
+- **Long-horizon recall ("on this day last year"):** the 7-day working memory
+  (§9a) now covers short-term continuity. True long-range callbacks would need a
+  longer or compressed history (or reading past editions back from the channel
+  archive) — still deferred; out of scope for the rolling cache.
 - **Sink format negotiation:** if sinks ever expose accepted formats via their MCP
   schema, we can replace attempt-and-degrade with a declared check.
 
@@ -290,3 +353,4 @@ fragility that v1's curl+token delivery suffers from.
 | model fills slots | **two-pass render**: editorial plan → deterministic assembly |
 | gmail draft + telegram (curl+token) | **capability-gated sinks**, MCP-preferred, format fallbacks |
 | compose in one prose pass | judgment/assembly separated for reliability |
+| stateless, channels are the only archive | + **rolling 7-day working memory** (HTML + JSON sidecar) for continuity |
