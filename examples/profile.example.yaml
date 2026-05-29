@@ -1,0 +1,74 @@
+# plannen-post LOCAL PROFILE — machine-only bindings.
+#
+# This file resolves the LOGICAL names used in a config (sources' secrets, and
+# every `to:` sink) into REAL accounts, keys, devices, and commands on THIS
+# machine.
+#
+# ┌─ SECURITY ──────────────────────────────────────────────────────────────┐
+# │ This file holds secrets and may define shell commands. NEVER share it,    │
+# │ never commit it, keep it `chmod 600`. A downloaded *config* can REFER to  │
+# │ a sink by name but can never DEFINE a shell command — only this file can. │
+# │ That is what makes running a stranger's config safe.                      │
+# └───────────────────────────────────────────────────────────────────────────┘
+#
+# Net rule: a connected MCP needs NO binding except personal routing
+# (chat_id, recipient, device). In an all-MCP setup this file is nearly empty.
+# Lives at ~/.post/profile.yaml (never beside the shared config).
+
+# ── secrets ───────────────────────────────────────────────────────────────────
+# Names referenced by a source's `secret:` field. Prefer pulling from the
+# environment over inlining a literal. Only needed for NON-MCP sources (a raw
+# HTTP API); connected MCPs carry their own auth and appear nowhere here.
+secrets:
+  FINANCE_API_KEY: "${env:FINANCE_API_KEY}"   # or a literal: "sk_live_..."
+
+# ── sinks ───────────────────────────────────────────────────────────────────
+# Resolve each logical `to:` from the config's `deliver:` block.
+# `via` is one of: mcp | http | shell.  shell sinks are LOCAL-ONLY (security).
+sinks:
+
+  # Connected MCP → auth handled. Only personal routing remains, and even that
+  # can default: drafting "to self" uses the connected account's own address.
+  gmail:
+    via: mcp
+    tool: gmail.create_draft
+    to: self                       # or an explicit address: "me@example.com"
+    subject: "Post — {{date}}"     # {{date}} → "Fri 22 May 2026"
+
+  # Preferred: a Telegram MCP carries its own token — no env-var footgun.
+  telegram:
+    via: mcp
+    tool: telegram.send_message
+    chat_id: "12345678"            # personal routing — stays local
+    # ── legacy curl alternative (if you have no Telegram MCP) ──
+    # via: http
+    # url: "https://api.telegram.org/bot${env:TELEGRAM_BOT_TOKEN}/sendMessage"
+    # chat_id: "12345678"
+    # NOTE: put TELEGRAM_BOT_TOKEN in ~/.zshenv (NOT ~/.zshrc) so a
+    #       non-interactive /schedule routine can see it.
+
+  whatsapp:
+    via: mcp
+    tool: whatsapp-notify.send_notification
+    to: "+3247xxxxxxx"             # personal routing — stays local
+
+  # SHELL sink — definable ONLY in this local profile, never in a shared config.
+  # Receives the rendered file; {file} is substituted with its path.
+  printer:
+    via: shell
+    command: "lp -d office_printer {file}"
+
+# ── render capability ─────────────────────────────────────────────────────────
+# Turns the composed HTML into other formats (png/pdf). OPTIONAL: if absent, any
+# delivery asking for png/pdf falls back per its `else:` chain. HTML never needs
+# this. Prefer a connected render MCP over a bundled binary.
+render:
+  via: mcp
+  tool: render.html_to             # html -> {png, pdf}; called with {format}
+  # ── local CLI alternative ──
+  # via: shell
+  # command: "npx --yes wkhtmltox {in} --format {format} {out}"
+
+# ── defaults ──────────────────────────────────────────────────────────────────
+defaults:
+  timezone: Europe/Brussels
