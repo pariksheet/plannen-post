@@ -99,7 +99,7 @@ If a source isn't connected, a tool errors, or a URL times out, that section is 
 
 ## Customising the look
 
-The Gmail draft body is rendered from `templates/newspaper.html`. Slots are HTML comments:
+The edition is rendered from a **theme** — `templates/<theme>.html`, chosen by `masthead.theme` in your config (e.g. `theme: classic` → `templates/classic.html`). If the named theme is missing, it falls back to `templates/newspaper.html`. Ships with `classic` (the hand-drawn three-column look) and the `newspaper` default; copy one to start your own. Slots are HTML comments:
 
 ```html
 <!-- {{intro}} -->      <!-- spine slots -->
