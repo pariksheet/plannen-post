@@ -6,226 +6,118 @@ allowed-tools: Read Write Bash WebSearch WebFetch
 
 # post-compose (v2)
 
-You compose a one-page personalised newspaper from data the user can reach
-(MCP tools, web search, HTTP, CLI, files), render it into a styled HTML edition,
-and deliver it to the channels their config asks for.
+Compose a one-page personalised newspaper from data the user can reach (MCP tools,
+web search, HTTP, CLI, files), render it into a styled edition, and deliver it to
+the channels their config asks for.
 
-Two files drive everything, and they are **strictly separated**:
+**Detail lives in `reference/` — read each file when you reach its step, not before:**
+- `reference/sources.md` — source types + gather rules (step 3)
+- `reference/components.md` — assembly, component kit, placement, masthead, digest (step 5)
+- `reference/delivery.md` — sinks, formats, fallback, security (step 7)
+- `reference/failure-modes.md` — what to do when things break
+- `${CLAUDE_PLUGIN_ROOT}/docs/ARCHITECTURE.md` — the full design, if anything is ambiguous
 
-- **`~/.post/config.md`** — the *portable content brief*. Frontmatter (sources,
-  sections, delivery) + prose-hint body. Logical names only. **No secrets, no
-  personal identifiers, no machine paths, no shell commands.**
-- **`~/.post/profile.yaml`** — the *local profile*. Resolves logical names to real
-  accounts, keys, devices. Holds non-MCP secrets, sink routing, must-watch
-  senders, and the optional render capability. **Never shared.**
+## Two files drive everything (strictly separated)
 
-The architecture this implements lives in `${CLAUDE_PLUGIN_ROOT}/docs/ARCHITECTURE.md`
-— read it if anything here is ambiguous. Core principles you must honour:
+- **`~/.post/config.md`** — the *portable content brief*: frontmatter (`masthead`,
+  `sources`, `sections`, `deliver`) + per-section prose hints (markdown body, one
+  `## <section-id>` block each). Logical names only. **No secrets, identifiers,
+  paths, or shell.**
+- **`~/.post/profile.yaml`** — the *local profile*: resolves logical names to real
+  accounts, keys, devices; holds non-MCP secrets, sink routing, must-watch senders,
+  the optional render capability, shell sinks. **Never shared.**
 
-1. **A source is anything that returns data; a sink is anything that accepts content.**
-2. **Declare structure, prompt for judgment.** Frontmatter is deterministic; prose hints steer tone/selection.
-3. **Fill slots, don't invent layout.** Pass 1 emits a *plan*; Pass 2 assembles HTML from the theme's component kit. Never hand-write CSS.
-4. **Intent is portable; bindings are local.** Resolve logical names through the profile.
-5. **Connected MCP = no binding needed.** The MCP server owns its auth.
-6. **Capability-gated with graceful degradation.** Probe; use if present; else fall back per declared order and warn.
-7. **Short, bounded memory.** Each edition persists as HTML + a JSON sidecar; keep the last 7; use it for continuity only.
+## Principles (non-negotiable)
 
-Per-section and per-channel failures **never abort the run** — capture and report them.
+1. A source is anything that returns data; a sink is anything that accepts content.
+2. **Declare structure, prompt for judgment** — frontmatter is deterministic; prose hints steer tone/selection.
+3. **Fill slots, don't invent layout** — Pass 1 emits a plan; Pass 2 assembles from the theme's component kit. Never hand-write CSS.
+4. **Intent is portable; bindings are local** — resolve logical names through the profile.
+5. **Connected MCP = no binding needed** — the MCP server owns its auth.
+6. **Capability-gated with graceful degradation** — probe; use if present; else fall back per declared order and warn.
+7. **Short, bounded memory** — each edition persists as HTML + a JSON sidecar; keep the last 7; use it for continuity only.
+
+Per-section and per-channel failures **never abort the run** (see `reference/failure-modes.md`).
 
 ---
 
 ## Run flow
 
-### 0. Load config + profile
+**0. Load config + profile.**
+- `~/.post/config.md` missing → first-run setup: `mkdir -p ~/.post`; copy
+  `${CLAUDE_PLUGIN_ROOT}/examples/config.example.md` → `~/.post/config.md` and
+  `examples/profile.example.yaml` → `~/.post/profile.yaml`; open the config
+  (`${EDITOR:-vi} ~/.post/config.md`); print "First-run setup — edit
+  `~/.post/config.md` (and `profile.yaml`), then run `/plannen-post:post` again."
+  and exit. (Suggest `/plannen-post:setup` for a guided alternative.)
+- Malformed frontmatter → print the first parse error verbatim, exit. Don't repair.
+- `profile.yaml` may be absent → treat as empty (all-MCP setups need almost nothing); unresolved sinks/secrets are handled by capability-gating in step 7.
 
-- **`~/.post/config.md`** missing → first-run setup:
-  1. `mkdir -p ~/.post`
-  2. Copy `${CLAUDE_PLUGIN_ROOT}/examples/config.example.md` → `~/.post/config.md`
-     and `${CLAUDE_PLUGIN_ROOT}/examples/profile.example.yaml` → `~/.post/profile.yaml`.
-  3. Open the config in the editor: `${EDITOR:-vi} ~/.post/config.md`.
-  4. Print: "First-run setup — edit `~/.post/config.md` (and `~/.post/profile.yaml`), then run `/plannen-post:post` again." Exit cleanly.
-- Malformed frontmatter → print the first parse error verbatim and exit. Do not repair.
-- `~/.post/profile.yaml` may be absent — treat as an empty profile (all-MCP setups need almost nothing). Sinks/secrets/must_watch that the config references but the profile doesn't resolve are handled by capability-gating in step 7.
+**1. Resolve runtime tokens.** Today = local date in `profile.defaults.timezone`
+(fallback `Europe/Brussels`). Expand `{{since_last_edition}}` (see
+`reference/sources.md`). Compute masthead vars: dateline, issue number (days since
+`2026-01-01`, 3-digit), printed time (`"HH:MM am"` lowercase).
 
-Parse from the config: `masthead`, `sources`, `sections`, `deliver` (frontmatter)
-and the per-section prose hints (markdown body, one `## <section-id>` block each).
+**2. Read prior memory (continuity).** Read the most recent 1–3
+`~/.post/memory/*.json` sidecars; keep their `carryover`, `inbox_surfaced`,
+`open_items` for Pass 1. **First run (no sidecars): no continuity — invent none.**
 
-### 1. Resolve runtime tokens
+**3. Gather sources** — fan out, failure-isolated. See **`reference/sources.md`**.
 
-- **Today** = local date in `profile.defaults.timezone` (fallback `Europe/Brussels`).
-- **`{{since_last_edition}}`** → look at `~/.post/memory/` for the newest `YYYY-MM-DD.html`. If found, expand to `after:YYYY/MM/DD` (its date). If memory is empty, expand to `newer_than:1d`. This is what makes Monday reach back to Friday and a skipped day get covered. Substitute the token anywhere it appears in a source's `args`.
-- Compute masthead vars: dateline, issue number (days since `2026-01-01`, zero-padded to 3), printed time (`"HH:MM am"` lowercase).
-
-### 2. Read prior memory (continuity)
-
-Read the most recent 1–3 sidecars from `~/.post/memory/*.json`. Keep their
-`carryover`, `inbox_surfaced`, and `open_items` in mind for Pass 1. This is how
-continuity works — you join today's fresh data with yesterday's facts. **First
-run (no sidecars): there is no continuity; do not invent any.**
-
-### 3. Gather sources (fan-out, failure-isolated)
-
-Walk `sources`. For each, dispatch by `type`. Resolve any `secret: NAME` to
-`profile.secrets.NAME` (or the env var it names). Store the result keyed by source
-`name`. On **any** failure (MCP not connected, tool error, non-2xx, timeout, parse
-error, missing secret), capture `{source, error}` and continue.
-
-| type | how to fulfill |
-|---|---|
-| `mcp` | Resolve `tool: server.name` to an available MCP tool — try `mcp__<server>__<name>` and the plugin form `mcp__plugin_<server>_<server>__<name>`; match whichever exists. Invoke with `args` (default `{}`). |
-| `http` | `curl -sS --max-time 15 <url>` (inject secret header/param if `secret:` set). `as: json` → parse; else text. |
-| `web-search` | Run `WebSearch` with `query`. Keep titles + URLs for provenance. |
-| `cli` | **Only if defined in the profile** (security). Run the profile's command, capture stdout. A config naming a `cli` source the profile doesn't define is skipped with a warning. |
-| `file` | Read the path (from profile if machine-specific). |
-
-`ai-intro` / `ai-outro` sections have no source — skip here, compose in Pass 1.
-
-### 4. Pass 1 — editorial judgment
-
-Produce a **structured section-plan** (you'll assemble it in Pass 2). For each
-section in `sections`:
-
-- **Spine** sections always appear. **Dynamic** sections (`slot: dynamic`) appear
-  only when their source returned usable data — honour `when: present`. You may
-  also **improvise a new dynamic section** when a source surfaced something
-  notable that no configured section covers, using only components from the kit.
-- Write prose under the section's hint. **Limits:** ≤120 words/section, factual,
-  present tense, no marketing voice, no emoji unless the source data carries one.
-- **Lead/order:** pick what's most notable across everything for the `ai-intro`.
+**4. Pass 1 — editorial judgment.** Produce a structured section-plan:
+- Spine sections always appear; dynamic sections appear only when their source
+  returned usable data (`when: present`). You may improvise a new dynamic section
+  for something notable, using only kit components.
+- Write prose under each section's hint. **Limits:** ≤120 words/section, factual,
+  present tense, no marketing, no emoji unless the data carries one.
+- Pick the most notable thing across everything for `ai-intro` (the lead).
 - **Continuity (gated):** weave in change-since-last-edition *only when it adds
-  signal* — persistence ("3rd day of high pollen"), storyline carry, escalation
-  ("Silvia — 3rd day waiting"), recurrence ("second reminder", "follow-up on last
-  week's thread"). If the past adds nothing, stay silent. Never narrate "yesterday
-  we said…".
+  signal* — persistence, storyline carry, escalation, recurrence ("second
+  reminder", "follow-up on last week's thread"). If the past adds nothing, stay
+  silent. Never narrate "yesterday we said…".
+- **Inbox** (if `inbox_new` / `inbox_open` exist): *main brief* from `inbox_new`
+  (the 3–5 that matter; note how many others are tucked away); *still-open rail*
+  from `inbox_open` (keep only threads whose **latest message is not the user's**
+  AND from `profile.inbox.must_watch` or clearly awaiting reply; cap ~3; use prior
+  `open_items` to escalate by `shown_count` and **drop** once the user has replied).
+- Each planned section: `{ id, kind|component, slot, kicker, tagline, body, byline? }`.
+  Also emit per-section `carryover`, `inbox_surfaced`, and updated `open_items`.
 
-**Inbox specifics** (if the config has `inbox_new`/`inbox_open` sources):
-- *Main brief* from `inbox_new`: the 3–5 that matter; note how many others are tucked away.
-- *Still-open rail* from `inbox_open`: keep only threads whose **latest message is not from the user** AND that are from `profile.inbox.must_watch` senders or clearly await a reply. Cap ~3. Use prior `open_items` to escalate by `shown_count` and to **drop** an item once the user has replied (latest message is now theirs).
+**5. Pass 2 — deterministic assembly.** Build the HTML from the theme + component
+kit; flow dynamic sections to balance columns; substitute masthead; write the
+plain-text digest. Full rules in **`reference/components.md`**.
 
-Each planned section is: `{ id, kind|component, slot, kicker, tagline, body, byline? }`.
-Also emit the **carryover** facts each section wants to leave for tomorrow, plus
-`inbox_surfaced` (thread ids) and updated `open_items` (with `shown_count`).
+**6. Write working memory.** Write the edition to `~/.post/memory/${TODAY}.html`
+and the sidecar to `~/.post/memory/${TODAY}.json` (`{ date, carryover{per-section},
+inbox_surfaced[], open_items[], events_today[], sections_rendered[],
+sections_skipped[] }`). **Prune** to the 7 newest `YYYY-MM-DD.{html,json}` pairs.
 
-### 5. Pass 2 — deterministic assembly
+**7. Deliver.** Resolve each `deliver` entry through the profile; capability-gate
+format; dispatch per sink; walk `else:` on failure. Full rules in
+**`reference/delivery.md`**.
 
-Read `${CLAUDE_PLUGIN_ROOT}/templates/<masthead.theme or "newspaper">.html`.
-
-**Render each planned section** as an `<article>` using the component kit
-(omit blocks for absent fields):
-
-```html
-<article class="post-section post-section--<id>">
-  <div class="kicker">{KICKER}</div>      <!-- omit for outro -->
-  <h2 class="hand">{tagline}</h2>          <!-- omit if none -->
-  <p class="byline">{byline}</p>           <!-- intro only, optional -->
-  <hr class="dashed">                      <!-- omit for outro & weather -->
-  <div class="body">{body_html}</div>
-</article>
-```
-
-Component → markup (the theme's CSS does the styling; never write CSS):
-
-| component | render the body as |
-|---|---|
-| `card` | paragraphs in `<p>` |
-| `list` | `<ul><li>` (CSS adds the arrow) |
-| `stat` | `<div class="stat"><span class="num">N</span><span class="lbl">…</span></div>` |
-| `quote` | `<blockquote class="pull">…</blockquote>` |
-| `two-col` | `<div class="twocol"><div>…</div><div>…</div></div>` |
-| `photo` | `<figure><img src="…"><figcaption>…</figcaption></figure>` |
-| `sticky-note` | outro styling (set by `post-section--outro`) |
-
-**Place sections:**
-- **Spine** → its named slot: replace `<!-- {{<id>}} -->` (intro, weather, events, inbox, outro).
-- **Dynamic** → flow into the **dynamic zone** to balance columns: fill
-  `<!-- {{dynamic.left}} -->` and `<!-- {{dynamic.center}} -->` first (and
-  `<!-- {{dynamic.right}} -->` only if needed), appending each section to whichever
-  marker's column is currently **shortest** by rough rendered height. Never leave
-  one column long and another empty.
-- A slot with no matching/failed section → empty string; the column collapses cleanly.
-
-**Masthead substitution:**
-- `<!-- {{masthead.dateline}} -->` → `"{Day} · {DD} {Mon} · morning edition[ · for the {family}][ · {emoji} {temp}°C]"`. Drop the family clause if `masthead.family` is unset; drop the weather clause if no weather data. Emoji: ☀ clear, ⛅ partly cloudy, ☁ overcast, 🌧 rain, ❄ snow, 🌫 fog.
-- `<!-- {{masthead.printed}} -->` → the printed time from step 1.
-
-Write the rendered HTML to `/tmp/plannen-post-${TODAY}.html`.
-
-**Plain-text digest** (for text sinks): per section emit `KICKER` heading, blank
-line, tagline-then-body; join sections with `\n\n---\n\n`; prepend
-`THE PLANNEN POST — {Day DD Mon}`. Outro: body only.
-
-### 6. Write working memory
-
-- Write the rendered HTML to `~/.post/memory/${TODAY}.html`.
-- Write the sidecar to `~/.post/memory/${TODAY}.json`: `{ date, carryover{per-section}, inbox_surfaced[], open_items[], events_today[], sections_rendered[], sections_skipped[] }` — i.e. the Pass-1 plan's continuity facts.
-- **Prune**: keep only the 7 newest `YYYY-MM-DD.{html,json}` pairs; delete older.
-
-### 7. Deliver (sinks, capability-gated)
-
-For each entry in `deliver` (a `{to, format, else?}` triple), resolve `to` to
-`profile.sinks.<to>` and dispatch independently. One channel failing never blocks
-another. Walk the `else:` chain on missing capability; warn.
-
-- **Format gating.** `html` is always available. `png`/`pdf` require
-  `profile.render` (an `html→{png,pdf}` capability — a render MCP, or a local shell
-  renderer such as `scripts/render-png.sh`). To produce the asset: run the render
-  capability with `{in}` = the `/tmp` HTML edition and `{out}` = a `/tmp` image
-  path (for `via: shell`, substitute `{in}`/`{out}`/`{format}` into the command and
-  run it). If no render capability exists → take `else:` (e.g. `text`, `html-link`,
-  `skip`) and record a warning.
-- **Sink dispatch by `via`:**
-  - `via: mcp` → call the named MCP tool. **Gmail (`gmail.create_draft`) is
-    draft-only — never send.** For an **image/pdf** format on an image-capable sink
-    (e.g. `whatsapp-notify.send_notification`), pass the rendered file as the tool's
-    image/file parameter (`imagePath`) with the masthead line as the `message`
-    caption. For **text** format, send the plain-text digest (chunk to ≤4000 chars
-    on `---` boundaries for chat sinks).
-  - `via: http` → curl (e.g. legacy Telegram `sendMessage` with `${env:TOKEN}`). If
-    a required env var/token is unset, capture "skipped: <VAR> not set" and continue.
-  - `via: shell` → run the profile's command with `{file}`/`{format}` substituted.
-    **Shell sinks are valid only when defined in the profile** — never run a shell
-    command a config introduced.
-- A `to:` the profile doesn't resolve → skip with a warning.
-
-Capture each channel's result (draft id, messages sent, file path, or the skip reason).
-
-### 8. Report
-
-Tight terminal summary: sections rendered, sections skipped (with reason),
-per-channel result, the edition path, and that memory was written. Example:
+**8. Report.** Tight terminal summary — sections rendered, sections skipped (with
+reason), per-channel result, edition path, memory written. Example:
 
 ```
 The Plannen Post composed.
-
-  ✓ gmail draft (id: r-3f8a…)
-  ⚠ whatsapp png → fell back to text (no render capability)
-
+  ✓ whatsapp png (msg 3EB0…)
+  ⚠ gmail draft → skipped (sink unresolved)
 Sections: intro · weather · events · inbox · sport · tech · startup · news · outro
 Skipped:  watches — source empty
 Edition:  /tmp/plannen-post-2026-05-29.html
 Memory:   ~/.post/memory/2026-05-29.{html,json}
 ```
-
-If everything worked, drop the skipped block. If all sources failed, still compose
-intro+outro from an empty set ("quiet morning") and deliver that.
+Drop the skipped block if all clean.
 
 ---
 
 ## Hard rules
 
-- **Never auto-send Gmail.** `create_draft` only — the user reviews and sends.
-- **Never call destructive MCP tools.** Read + compose + draft/notify only. No `create_*`, `update_*`, `delete_*`.
-- **No CSS authoring.** Pass 1 plans; Pass 2 fills the kit. New info → new section *from existing components*, never new styles.
-- **No retries within a run.** Log failures and move on. Tomorrow's Post is the retry.
-- **Only the profile may define `cli` sources or shell sinks.** A config can reference them by name but never introduce them.
-- **Persistence is bounded.** Write only `~/.post/config.md` (first run), `~/.post/memory/*` (rolling 7), and `/tmp/plannen-post-*.html`. No other state.
-- **Continuity is gated.** Surface change-since-yesterday only when it adds signal.
-
-## Failure modes
-
-- **`~/.post/config.md` missing** → first-run flow, exit cleanly.
-- **A source fails** → skip its section(s), report it; the run continues.
-- **All sources fail** → compose a minimal intro+outro and deliver with warnings.
-- **A format isn't renderable** (no `profile.render`) → take the delivery's `else:` and warn.
-- **A sink is unreachable / unresolved** → skip that channel, keep the others.
-- **No delivery channel works** → the HTML at `/tmp` and `~/.post/memory/` is the recovery; exit non-zero with the errors printed.
+- **Never auto-send Gmail** — `create_draft` only.
+- **Never call destructive MCP tools** — read + compose + draft/notify only. No `create_*` / `update_*` / `delete_*`.
+- **No CSS authoring** — Pass 1 plans, Pass 2 fills the kit. New info → new section from existing components.
+- **No retries within a run** — log failures and move on; tomorrow's Post is the retry.
+- **Only the profile may define `cli` sources or shell sinks** — a config references them by name, never introduces them.
+- **Persistence is bounded** — write only `~/.post/config.md` (first run), `~/.post/memory/*` (rolling 7), `/tmp/plannen-post-*.html`. Nothing else.
+- **Continuity is gated** — surface change-since-yesterday only when it adds signal.
