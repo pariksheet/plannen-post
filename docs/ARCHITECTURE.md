@@ -263,14 +263,19 @@ Local-only, never shared (same trust class as the profile).
   …                   ← keep the last 7 editions; prune older on each run
 ```
 
-**The sidecar is the Pass-1 section-plan** (§7) plus a few continuity facts — we
-get it for free, no extra LLM work. It exists so the next morning's render can
-reason precisely instead of re-parsing yesterday's HTML. Illustrative shape:
+**The sidecar is the Pass-1 section-plan** (§7) plus a small **per-section
+carryover** — whatever each section might want to reference tomorrow. We get it
+for free, no extra LLM work. It exists so the next morning's render can reason
+precisely instead of re-parsing yesterday's HTML. Illustrative shape:
 
 ```json
 {
   "date": "2026-05-29",
-  "weather": { "headline": "Rain", "pollen_grass": "high" },
+  "carryover": {
+    "weather": { "headline": "Rain", "pollen_grass": "high", "uv": 6 },
+    "sport":   { "storylines": ["NED won 2-0; plays for group top next"] },
+    "markets": { "levels": { "^GSPC": 5300 } }
+  },
   "inbox_surfaced": ["thread_id_a", "thread_id_b"],
   "open_items": [{ "thread_id": "x", "who": "Silvia (EC)", "shown_count": 3 }]
 }
@@ -285,6 +290,15 @@ reason precisely instead of re-parsing yesterday's HTML. Illustrative shape:
   instead of dumbly re-listing.
 - **Callbacks / trends.** "Third day of high grass pollen," "yesterday's rain
   clears by noon."
+
+**Continuity is cross-cutting and editorially gated.** Every section's Pass-1 may
+read the prior sidecar(s) and weave in continuity *where it changes the story* —
+persistence ("pollen high again — 3rd day"), a storyline carry ("after yesterday's
+win, they play for top spot"), a recurrence ("second reminder today," "a follow-up
+on last week's thread"). It does this by joining today's fresh data with
+yesterday's carryover. The guardrail: surface continuity only when it adds signal;
+if the past adds nothing, stay silent — never tediously narrate "yesterday we
+said…". This is editorial behaviour (prose), not a structural rule.
 
 **Bounds (deliberate)**
 - Last **7 editions**, rolling; older files pruned each run.
