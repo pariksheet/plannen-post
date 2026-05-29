@@ -38,12 +38,24 @@ sources:
     type: mcp
     tool: get_briefing_context          # resolved against the connected plannen MCP
 
-  - name: inbox
+  # Inbox in two buckets. `inbox_new` is the main brief; `inbox_open` is the
+  # "still open" rail (read threads where the ball is in your court). The
+  # editorial pass + memory keep the rail human-only, deduped, and escalating.
+  - name: inbox_new
+    type: mcp
+    tool: gmail.search_threads
+    # {{since_last_edition}} → runtime expands to after:YYYY/MM/DD from the newest
+    # file in memory/ (so Monday reaches back to Friday); else newer_than:1d.
+    # is:important deliberately omitted — Gmail over-marks bot/CI mail important.
+    args:
+      query: "(is:unread OR is:starred) {{since_last_edition}} -category:promotions -category:social"
+      max_results: 25
+  - name: inbox_open
     type: mcp
     tool: gmail.search_threads
     args:
-      query: "is:unread newer_than:1d -category:promotions -category:social"
-      max_results: 15
+      query: "in:inbox -in:sent newer_than:7d -category:promotions -category:social -from:notifications@github.com -from:no-reply -from:noreply"
+      max_results: 30
 
   - name: markets
     type: http
@@ -78,7 +90,7 @@ sections:
 
   - id: inbox    
     slot: spine        
-    source: inbox      
+    source: [inbox_new, inbox_open]  
     component: list
 
   - id: markets  
@@ -147,9 +159,18 @@ Lead with anything time-critical or newly added. Skip all-day noise.
 
 ## inbox
 
-Pick the 3–5 threads worth knowing about — real people, replies expected,
-deadlines, money. For each: sender, one-line summary, why it matters. Skip
-newsletters and bulk mail. If you summarised N of M, note the rest are tucked away.
+Two buckets.
+
+**Main brief** (from inbox_new): the 3–5 threads worth knowing — real people,
+replies expected, deadlines, money. Sender, one-line summary, why it matters.
+Skip newsletters/bulk. Note how many others are tucked away.
+
+**Still-open rail** (from inbox_open): read-but-unanswered threads where the ball
+is in your court — keep only those whose *latest message isn't from you* AND that
+are from your **must-watch senders** (resolved from the local profile) or where a
+reply is clearly expected. Cap at ~3. Use memory to escalate by shown_count ("3rd
+day waiting"), frame recurrences ("second reminder", "follow-up on last week's
+thread"), and drop once you've replied.
 
 ## markets
 

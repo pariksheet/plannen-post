@@ -69,6 +69,16 @@ render:
   # via: shell
   # command: "npx --yes wkhtmltox {in} --format {format} {out}"
 
+# ── inbox: must-watch senders ─────────────────────────────────────────────────
+# Personal, machine-local. The portable config refers to these generically as
+# "must-watch senders" — the actual people/domains live ONLY here. Names or
+# domains both work. Used by the inbox "still open" rail.
+inbox:
+  must_watch:
+    - "school.example.com"           # e.g. your kid's school
+    - "creche.example.com"           # e.g. the childcare provider
+    - "important.client.com"         # e.g. a key client contact
+
 # ── defaults ──────────────────────────────────────────────────────────────────
 defaults:
   timezone: Europe/Brussels
