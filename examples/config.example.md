@@ -1,188 +1,127 @@
 <!--
-  plannen-post config — the PORTABLE content brief.
+  config.example.md — a GENERIC starter. No plannen, no exotic MCPs.
 
-  This file says WHAT the paper contains and WHERE it goes, by logical name.
-  It carries NO secrets, NO personal identifiers, NO machine paths, NO shell
-  commands — so you can hand it to someone else and they can run it against
-  their own bindings.
+  It uses only widely-available sources, so it works for most people:
+    • weather  → open-meteo over HTTP (keyless — just change the lat/long)
+    • events   → Google Calendar MCP   (optional; skipped if not connected)
+    • inbox    → Gmail MCP             (optional; skipped if not connected)
+    • news     → web search            (built-in)
+    • intro/outro → the model, from everything gathered
 
-  The machine-specific resolution (chat_id, API keys, printer name, which
-  render capability) lives in your LOCAL PROFILE, never here. See
-  examples/profile.example.yaml.
+  Graceful degradation: a section whose source isn't connected is simply skipped
+  with a warning — the rest of the paper still composes. So you can run this with
+  *nothing but* the weather source and still get a paper, then light up more
+  sections as you connect MCPs.
 
-  Two layers, on purpose:
-    • frontmatter (below)  = the deterministic skeleton — sections, sources,
-                             slots, delivery. Debuggable: "why did sport
-                             vanish?" has an answer.
-    • markdown body        = the prose hints — editorial taste, what to
-                             emphasise, what to skip. Fuzzy on purpose.
+  Easiest way to build YOUR version: run `/plannen-post:setup` — it detects your
+  connected MCPs and scaffolds a config tailored to what you actually have.
+
+  This file is the PORTABLE content brief: logical names only, NO secrets, NO
+  personal identifiers, NO shell. Machine bindings live in profile.yaml.
+  For a rich real-world config, see config.pari.example.md.
 -->
 ---
-# ── masthead ────────────────────────────────────────────────────────────────
 masthead:
   title: "THE PLANNEN POST"
-  family: "the Cohen family"     # optional; drops from the dateline if absent
-  theme: classic                 # a theme we ship; presentation only
+  # family: "the Smith family"     # optional — appears in the dateline
+  theme: classic
 
-# ── sources (data in) ────────────────────────────────────────────────────────
-# Each source has a logical `name` other parts of the config refer to.
-# `type` is one of: mcp | http | web-search | cli | file.
-# Connected MCPs need no secret here — the MCP server owns its auth.
+# ── sources (data in) ─────────────────────────────────────────────────────────
+# type: mcp | http | web-search | cli | file. Logical `name` is referenced below.
 sources:
-  - name: weather
+  - name: weather                  # open-meteo forecast — KEYLESS. Change lat/long.
     type: http
-    url: "https://api.open-meteo.com/v1/forecast?latitude=50.85&longitude=4.35&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code&timezone=Europe%2FBrussels&forecast_days=1"
+    url: "https://api.open-meteo.com/v1/forecast?latitude=51.51&longitude=-0.13&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code,uv_index_max&timezone=auto&forecast_days=1"
     as: json
 
-  - name: plannen
+  - name: calendar                 # today's events via the Google Calendar MCP
     type: mcp
-    tool: get_briefing_context          # resolved against the connected plannen MCP
+    tool: google-calendar.list_events
+    args: { maxResults: 10 }       # tune to your calendar MCP's parameters
 
-  # Inbox in two buckets. `inbox_new` is the main brief; `inbox_open` is the
-  # "still open" rail (read threads where the ball is in your court). The
-  # editorial pass + memory keep the rail human-only, deduped, and escalating.
-  - name: inbox_new
+  - name: inbox_new                # main inbox brief
     type: mcp
     tool: gmail.search_threads
-    # {{since_last_edition}} → runtime expands to after:YYYY/MM/DD from the newest
-    # file in memory/ (so Monday reaches back to Friday); else newer_than:1d.
-    # is:important deliberately omitted — Gmail over-marks bot/CI mail important.
-    args:
-      query: "(is:unread OR is:starred) {{since_last_edition}} -category:promotions -category:social"
-      max_results: 25
-  - name: inbox_open
+    # {{since_last_edition}} expands at runtime to after:YYYY/MM/DD from memory
+    # (so Monday reaches back to Friday); falls back to newer_than:1d if no memory.
+    args: { query: "(is:unread OR is:starred) {{since_last_edition}} -category:promotions -category:social", max_results: 25 }
+
+  - name: inbox_open               # "still open" rail — read but awaiting your reply
     type: mcp
     tool: gmail.search_threads
-    args:
-      query: "in:inbox -in:sent newer_than:7d -category:promotions -category:social -from:notifications@github.com -from:no-reply -from:noreply"
-      max_results: 30
+    args: { query: "in:inbox -in:sent newer_than:7d -category:promotions -category:social -from:notifications@github.com -from:no-reply -from:noreply", max_results: 30 }
 
-  - name: markets
-    type: http
-    url: "https://api.example-finance.com/v1/quote?symbols=^GSPC,^STOXX50E,BTC-EUR"
-    as: json
-    secret: FINANCE_API_KEY             # NAME of a key resolved in the local profile — not the key itself
-
-  - name: tennis
+  - name: news                     # headlines via web search — tailor the query
     type: web-search
-    query: "ATP WTA tennis results and news today"
+    query: "top world news headlines today"
 
-# ── sections ─────────────────────────────────────────────────────────────────
-# The SPINE is always present (intro/weather/events/inbox/outro).
-# DYNAMIC-zone sections appear only when their source has something worth saying;
-# the renderer may also improvise *new* dynamic sections from the component kit.
-# `component` must be one the theme provides: card | list | sticky-note | stat
-#   | quote | two-col | photo.
+# ── sections ──────────────────────────────────────────────────────────────────
+# slot: spine = always present; dynamic = appears only when its source has data.
+# component: card | list | stat | quote | two-col | photo
 sections:
   - id: intro    
-    slot: spine        
-    kind: ai-intro                       # composed last, from the full gathered set
-
+    slot: spine    
+    kind: ai-intro
   - id: weather  
-    slot: spine        
-    source: weather    
+    slot: spine    
+    source: weather                
     component: card
-
   - id: events   
-    slot: spine        
-    source: plannen    
+    slot: spine    
+    source: calendar               
     component: list
-
   - id: inbox    
-    slot: spine        
+    slot: spine    
     source: [inbox_new, inbox_open]  
     component: list
-
-  - id: markets  
-    slot: dynamic      
-    source: markets    
-    component: stat
-    when: present                        # render only if the source returned data
-
-  - id: sport    
-    slot: dynamic      
-    source: tennis     
-    component: card
+  - id: news     
+    slot: dynamic  
+    source: news                   
+    component: list  
     when: present
-
   - id: outro    
-    slot: spine        
+    slot: spine    
     kind: ai-outro
 
-# ── delivery (sinks) ─────────────────────────────────────────────────────────
-# Each entry is (to, format, else?). `to` is a LOGICAL sink name resolved in the
-# local profile. `format` is opt-in by capability: html is always available;
-# png/pdf need a connected render capability. `else` is the fallback if the
-# requested format/sink is unavailable — we attempt, then degrade, then warn.
+# ── delivery ──────────────────────────────────────────────────────────────────
+# Universal default: a Gmail draft you review and send. `format: html`.
+# To send the rendered newspaper as a PNG image to WhatsApp/Telegram instead,
+# add a render capability in profile.yaml and use `format: png` (see below).
 deliver:
-  - to: gmail        
-    format: html                         # email renders HTML natively; the default
-
-  - to: telegram     
-    format: text                         # plain-text digest
-
-  - to: whatsapp     
-    format: png
-    else: html-link                      # no render capability? send a link instead
-
-  - to: printer      
-    format: pdf
-    else: skip                           # no printer / no renderer? just skip it
+  - to: gmail
+    format: html
+  # - to: whatsapp
+  #   format: png
+  #   else: text          # falls back to text if no render capability is present
 ---
 
-<!--
-  ── PROSE HINTS ──────────────────────────────────────────────────────────────
-  One `## <section-id>` block per section that wants steering. The text under
-  each heading is a free-form prompt telling the renderer how to turn raw source
-  data into prose: what to lead with, what to skip, how long, what tone.
-  A section with no block here gets a tight default summary.
-
-  Hard limits still apply (set by the skill): ≤ ~120 words/section, factual,
-  present tense, no marketing voice, no emoji unless the data carries one.
--->
-
 ## intro
-
-Set the tone of the day in 2–3 lines. Lead with whatever is most notable across
-everything gathered — a big event, a weather warning, a market move, an email
-that needs a reply. Conversational but tight. This is the front-page lead.
+2-3 lines, front-page lead. Open with whatever is most notable across everything
+gathered — a big event, a weather warning, an important email. Conversational but tight.
 
 ## weather
-
-One sentence. Lead with the headline (sunny / rain expected / cold snap), then
-high/low, then chance of precipitation only if it's non-trivial. Two sentences max.
+One sentence. Lead with the headline (sunny / rain / cold), then high/low, then
+chance of rain only if it's non-trivial. Mention the UV index if it's high.
 
 ## events
-
-The day's events as a tight list — time, title, who, where; one short line each.
-Lead with anything time-critical or newly added. Skip all-day noise.
+The day's events as a tight list — time, title, where; one short line each. Lead
+with anything time-critical. Skip all-day noise.
 
 ## inbox
-
 Two buckets.
 
-**Main brief** (from inbox_new): the 3–5 threads worth knowing — real people,
-replies expected, deadlines, money. Sender, one-line summary, why it matters.
-Skip newsletters/bulk. Note how many others are tucked away.
+**Main brief** (from inbox_new): the 3-5 threads worth knowing — real people,
+deadlines, money. Sender, one-line summary, why it matters. Skip newsletters/bulk.
+Note how many others are tucked away.
 
 **Still-open rail** (from inbox_open): read-but-unanswered threads where the ball
 is in your court — keep only those whose *latest message isn't from you* AND that
-are from your **must-watch senders** (resolved from the local profile) or where a
-reply is clearly expected. Cap at ~3. Use memory to escalate by shown_count ("3rd
-day waiting"), frame recurrences ("second reminder", "follow-up on last week's
-thread"), and drop once you've replied.
+are from your must-watch senders (resolved from the local profile) or clearly
+await a reply. Cap at ~3. Memory escalates by shown_count and drops once replied.
 
-## markets
-
-One line. The two or three moves that matter, with direction and rough size.
-No tickers-as-noise; say it like a human would over coffee.
-
-## sport
-
-Only if there's real tennis news today. One short card: the result or story that
-matters, a sentence of why. If nothing notable, omit the section entirely.
+## news
+Up to 3 headlines worth knowing, one line each, neutral. Skip a quiet day.
 
 ## outro
-
-A closing thought in 2–3 short lines. A forward look ("rain tomorrow"), a nudge
-("don't forget the dentist at 4"), or a plain sign-off. Renders as a sticky note.
+A short sign-off, 2-3 lines, as a sticky note. A forward look (tomorrow's weather,
+what's coming up) and/or a gentle nudge on anything pending. Warm, brief.

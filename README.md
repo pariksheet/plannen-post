@@ -13,6 +13,20 @@ No database, no web service, no Vercel deploy. State is two small local files (`
 
 Connected MCPs need no binding (they own their auth), so on an all-MCP setup the profile is nearly empty. See [`examples/`](examples/) for both files.
 
+## Prerequisites
+
+- **Claude Code** (this is a Claude Code plugin).
+- **The MCPs you want as sources/sinks**, connected in your session. None are mandatory — the Post composes from whatever you have and **skips sections whose source isn't connected**. Common ones:
+  - **Gmail MCP** → inbox brief (source) + draft delivery (sink)
+  - **Google Calendar MCP** → events
+  - **A weather source** → not needed; the examples use [open-meteo](https://open-meteo.com) over HTTP, keyless
+  - **Web search** → news/sport/any beat (built in)
+  - **A notify MCP** (WhatsApp/Telegram) → delivery
+  - **plannen** (optional, separate product) → family events + watched events
+- **For PNG/PDF editions:** Google Chrome (or Chromium/Edge) **+ node/npm**. Without them, image formats fall back to text/HTML. (HTML and Gmail-draft need nothing extra.)
+
+> **`plannen` vs `plannen-post`:** different products. `plannen-post` is this newspaper plugin; [`plannen`](https://github.com/pariksheet/plannen) is a separate family-planner whose MCP can *optionally* feed the events section. You do **not** need plannen to use the Post — the generic example doesn't reference it.
+
 ## Install
 
 Clone or place this directory anywhere on disk. Then in any Claude Code session:
@@ -23,19 +37,34 @@ claude --plugin-dir /path/to/plannen-post
 
 For development edits, `/reload-plugins` picks up changes without restarting.
 
-## First run
+## Quickstart (recommended)
+
+```text
+/plannen-post:setup
+```
+
+The interactive setup **detects your connected MCPs**, learns a little about you,
+walks you through your sections conversationally, **previews today's edition**, then
+configures delivery and (optionally) a schedule — writing `~/.post/config.md` +
+`~/.post/profile.yaml` only after you sign off. This is the easiest path and builds
+a config tailored to the tools you actually have.
+
+## First run (manual)
+
+Prefer to hand-write it? Just run:
 
 ```text
 /plannen-post:post
 ```
 
-On first run there is no config. The plugin will:
+With no config, it copies the bundled examples to `~/.post/config.md` +
+`~/.post/profile.yaml`, opens the config in `$EDITOR`, and exits. Edit the sections
+you want in `config.md`, put any bindings (sink routing, keys, must-watch senders)
+in `profile.yaml`, then re-run.
 
-1. Create `~/.post/config.md` and `~/.post/profile.yaml` from the bundled examples.
-2. Open `config.md` in `$EDITOR` (falls back to `vi`).
-3. Exit with: "First-run setup — edit `~/.post/config.md` (and `~/.post/profile.yaml`), then run `/plannen-post:post` again."
-
-Edit the sections you want in `config.md`, and put any bindings (sink routing, keys, must-watch senders) in `profile.yaml`, then re-run.
+Two starting points live in [`examples/`](examples/):
+- **`config.example.md`** — a generic, plannen-free starter (Gmail + Calendar + open-meteo + web search) that degrades gracefully.
+- **`config.pari.example.md`** — a rich, real-world config (plannen-integrated, pollen, four web-search beats, PNG-to-WhatsApp) as a reference.
 
 ## Scheduling
 
