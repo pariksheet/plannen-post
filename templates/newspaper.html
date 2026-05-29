@@ -159,7 +159,8 @@
     .post-section--weather .body { font-size: 14px; margin-top: 6px; }
 
     /* email/inbox = arrow bullets (default ul style above already does this) */
-    .post-section--email h2.hand { font-size: 22px; }
+    .post-section--email h2.hand,
+    .post-section--inbox h2.hand { font-size: 22px; }
 
     /* events = left-column day list */
     .post-section--events h2.hand { font-size: 22px; }
@@ -176,6 +177,35 @@
     .post-section--outro h2.hand { font-size: 24px; margin-bottom: 4px; }
     .post-section--outro hr.dashed { display: none; }
     .post-section--outro .body { font-size: 14px; }
+
+    /* ---------- component kit (used by the dynamic zone) ---------------- */
+    /* card = default post-section; list = default ul; sticky-note = outro.   */
+    .post-section .body .stat {
+      display: flex; align-items: baseline; gap: 8px; margin: 0 0 6px;
+    }
+    .post-section .body .stat .num {
+      font-family: 'Roboto Slab', Georgia, serif; font-weight: 900;
+      font-style: normal; font-size: 28px; line-height: 1;
+    }
+    .post-section .body .stat .lbl { color: var(--faint); font-size: 13px; }
+    .post-section .body blockquote.pull {
+      margin: 0 0 10px; padding-left: 12px;
+      border-left: 3px solid var(--rule);
+      font-style: italic; color: #2a2a2a;
+    }
+    .post-section .body .twocol {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+    }
+    @media (max-width: 900px) {
+      .post-section .body .twocol { grid-template-columns: 1fr; }
+    }
+    .post-section .body figure { margin: 0 0 10px; }
+    .post-section .body figure img {
+      width: 100%; height: auto; border-radius: 3px; display: block;
+    }
+    .post-section .body figure figcaption {
+      font-size: 12px; color: var(--faint); font-style: italic; margin-top: 4px;
+    }
 
     /* ---------- footer --------------------------------------------------- */
     .footer {
@@ -204,15 +234,18 @@
 
       <div class="col col-left">
         <!-- {{events}} -->
+        <!-- {{dynamic.left}} -->
       </div>
 
       <div class="col col-center">
         <!-- {{intro}} -->
+        <!-- {{dynamic.center}} -->
       </div>
 
       <div class="col col-right">
         <!-- {{weather}} -->
-        <!-- {{email}} -->
+        <!-- {{inbox}} -->
+        <!-- {{dynamic.right}} -->
         <!-- {{outro}} -->
       </div>
 
