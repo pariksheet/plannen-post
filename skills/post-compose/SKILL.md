@@ -167,13 +167,19 @@ For each entry in `deliver` (a `{to, format, else?}` triple), resolve `to` to
 another. Walk the `else:` chain on missing capability; warn.
 
 - **Format gating.** `html` is always available. `png`/`pdf` require
-  `profile.render` (an `html→{png,pdf}` capability — MCP preferred). If a format is
-  requested but no render capability exists → take `else:` (e.g. `text`,
-  `html-link`, `skip`) and record a warning.
+  `profile.render` (an `html→{png,pdf}` capability — a render MCP, or a local shell
+  renderer such as `scripts/render-png.sh`). To produce the asset: run the render
+  capability with `{in}` = the `/tmp` HTML edition and `{out}` = a `/tmp` image
+  path (for `via: shell`, substitute `{in}`/`{out}`/`{format}` into the command and
+  run it). If no render capability exists → take `else:` (e.g. `text`, `html-link`,
+  `skip`) and record a warning.
 - **Sink dispatch by `via`:**
-  - `via: mcp` → call the named MCP tool (e.g. `gmail.create_draft`,
-    `whatsapp-notify.send_notification`). **Gmail is draft-only — never send.**
-    For text sinks, chunk the plain-text digest to ≤4000 chars on `---` boundaries.
+  - `via: mcp` → call the named MCP tool. **Gmail (`gmail.create_draft`) is
+    draft-only — never send.** For an **image/pdf** format on an image-capable sink
+    (e.g. `whatsapp-notify.send_notification`), pass the rendered file as the tool's
+    image/file parameter (`imagePath`) with the masthead line as the `message`
+    caption. For **text** format, send the plain-text digest (chunk to ≤4000 chars
+    on `---` boundaries for chat sinks).
   - `via: http` → curl (e.g. legacy Telegram `sendMessage` with `${env:TOKEN}`). If
     a required env var/token is unset, capture "skipped: <VAR> not set" and continue.
   - `via: shell` → run the profile's command with `{file}`/`{format}` substituted.

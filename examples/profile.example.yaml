@@ -63,11 +63,12 @@ sinks:
 # delivery asking for png/pdf falls back per its `else:` chain. HTML never needs
 # this. Prefer a connected render MCP over a bundled binary.
 render:
-  via: mcp
-  tool: render.html_to             # html -> {png, pdf}; called with {format}
-  # ── local CLI alternative ──
-  # via: shell
-  # command: "npx --yes wkhtmltox {in} --format {format} {out}"
+  # Local headless Chrome — no MCP, no bundled chromium. Bundled with the plugin.
+  via: shell
+  command: "/path/to/plannen-post/scripts/render-png.sh {in} {out}"
+  # ── alternative: a render MCP ──
+  # via: mcp
+  # tool: render.html_to           # html -> {png, pdf}; called with {format}
 
 # ── inbox: must-watch senders ─────────────────────────────────────────────────
 # Personal, machine-local. The portable config refers to these generically as
