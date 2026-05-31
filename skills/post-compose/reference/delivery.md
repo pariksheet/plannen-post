@@ -12,6 +12,12 @@ blocks another. On a missing capability, walk the `else:` chain and warn.
   the render capability with `{in}` = the `/tmp` HTML edition and `{out}` = a `/tmp`
   image path (for `via: shell`, substitute `{in}` / `{out}` / `{format}` into the
   command and run it).
+- **A `png` render may emit several *page* files.** Chat sinks accept images only
+  and preview them inline, so the bundled renderer slices a long edition into
+  phone-shaped portrait pages and **prints one absolute path per line to stdout, in
+  reading order**. Treat that line list as the asset: a single line → one image; N
+  lines → N pages to send in order. (A one-page edition still writes the exact
+  `{out}` you passed, so nothing changes for short editions.)
 - If a format is requested but no render capability exists → take `else:`
   (e.g. `text`, `html-link`, `skip`) and record a warning.
 
@@ -19,10 +25,13 @@ blocks another. On a missing capability, walk the `else:` chain and warn.
 
 - **`via: mcp`** → call the named MCP tool.
   - **Gmail (`gmail.create_draft`) is draft-only — never send.**
-  - For an **image/pdf** format on an image-capable sink (e.g.
-    `whatsapp-notify.send_notification`), pass the rendered file as the tool's
-    image/file parameter (`imagePath`) with the masthead line as the `message`
-    caption.
+  - For an **image** format on an image-capable sink (e.g.
+    `whatsapp-notify.send_notification`), pass each rendered page (one stdout line
+    each) as the tool's image parameter (`imagePath`) in **separate calls, in
+    order**. Caption only the **first** page with the masthead line plus a page
+    count when there is more than one (e.g. `THE PLANNEN POST — Sun 31 May · 1/3`);
+    later pages get a bare `n/N` caption so the chat isn't repetitive. Report the
+    message id of each page sent.
   - For **text** format, send the plain-text digest (chunk to ≤4000 chars on `---`
     boundaries for chat sinks).
 - **`via: http`** → curl (e.g. legacy Telegram `sendMessage` with `${env:TOKEN}`).

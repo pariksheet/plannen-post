@@ -89,9 +89,17 @@
       gap: 36px;
     }
     @media (max-width: 900px) {
+      /* Phone-shaped render: single column + larger type so each page arrives
+         legible at ~1:1 on a phone instead of being downscaled into a sliver. */
       .columns { grid-template-columns: 1fr; gap: 24px; }
-      body { padding: 24px 20px; }
-      .masthead h1 { font-size: 48px; }
+      body { padding: 24px 22px; font-size: 18px; line-height: 1.55; }
+      .masthead h1 { font-size: 40px; }
+      .post-section .body,
+      .post-section--weather .body,
+      .post-section--outro .body { font-size: 17px; }
+      .post-section .body .faint { font-size: 15px; }
+      .post-section--intro h2.hand { font-size: 40px; }
+      .post-section .kicker { font-size: 11px; }
     }
 
     .col { min-width: 0; }
