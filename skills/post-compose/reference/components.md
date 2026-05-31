@@ -37,10 +37,14 @@ New info → a new section built **from existing components**, never new styles.
 - **Spine** sections → their named slot: replace `<!-- {{<id>}} -->`
   (`intro`, `weather`, `events`, `inbox`, `outro`).
 - **Dynamic** sections → flow into the dynamic zone to balance columns: fill
-  `<!-- {{dynamic.left}} -->` and `<!-- {{dynamic.center}} -->` first (and
-  `<!-- {{dynamic.right}} -->` only if needed), appending each to whichever
-  marker's column is currently **shortest** by rough rendered height. Never leave
-  one column long and another empty.
+  `<!-- {{dynamic.center}} -->` and `<!-- {{dynamic.right}} -->` first, appending
+  each to whichever of those two columns is currently **shortest** by rough
+  rendered height. **Reserve `<!-- {{dynamic.left}} -->`**: the left column holds
+  the day spine (`events`), and on the phone-shaped single-column render it leads
+  straight into the lead (`intro`) — anything placed in `dynamic.left` would wedge
+  between *Today* and *The Lead*. Use `dynamic.left` only as a last-resort overflow
+  when center **and** right are both substantially longer. Never leave one column
+  long and another empty.
 - A slot with no matching/failed section → empty string; the column collapses.
 
 ## Masthead substitution
