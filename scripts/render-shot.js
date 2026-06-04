@@ -46,29 +46,39 @@ function pagePath(p, total) {
   await page.setViewport({ width: WIDTH, height: MAX_PAGE_H, deviceScaleFactor: SCALE });
   await page.goto('file://' + path.resolve(input), { waitUntil: 'networkidle0' });
 
-  // Measure break candidates: the top edge of each major block. We only ever cut
-  // *between* blocks, never through one.
-  const { fullHeight, bounds } = await page.evaluate(() => {
-    const nodes = [...document.querySelectorAll('.masthead, .post-section, .footer')];
-    const bounds = nodes.map((n) => {
-      const r = n.getBoundingClientRect();
-      return { top: r.top + window.scrollY, bottom: r.bottom + window.scrollY };
+  // Each template column is one page. The 3-column grid collapses to a single
+  // column on the phone-width render, so its DOM order *is* the reading order;
+  // we break a new page whenever the next section belongs to a different column.
+  // This makes pages deterministic (one column → one page) instead of depending
+  // on where a height cap happens to fall. Masthead rides on page 1 (start = 0)
+  // and the footer on the last page (end = fullHeight); neither is a break
+  // candidate, so a short tail like the footer can never be orphaned onto a
+  // near-empty page. An over-tall column still splits by height as a fallback.
+  const { fullHeight, sections } = await page.evaluate(() => {
+    const cols = [...document.querySelectorAll('.columns .col')];
+    const sections = [];
+    cols.forEach((col, ci) => {
+      col.querySelectorAll('.post-section').forEach((n) => {
+        const r = n.getBoundingClientRect();
+        sections.push({ col: ci, top: r.top + window.scrollY, bottom: r.bottom + window.scrollY });
+      });
     });
-    return { fullHeight: document.body.scrollHeight, bounds };
+    return { fullHeight: document.body.scrollHeight, sections };
   });
 
-  // Greedy pack blocks into pages no taller than MAX_PAGE_H, breaking before any
-  // block that would overflow the current page. A block taller than a page gets
-  // its own (over-tall) page rather than being split.
   const pages = [];
   let start = 0;
   let lastBottom = 0;
-  for (const b of bounds) {
-    if (b.bottom - start > MAX_PAGE_H && lastBottom > start) {
+  let curCol = null;
+  for (const s of sections) {
+    const newColumn = curCol !== null && s.col !== curCol;   // column boundary → new page
+    const overflow = s.bottom - start > MAX_PAGE_H;          // over-tall column → split as fallback
+    if ((newColumn || overflow) && lastBottom > start) {
       pages.push([start, lastBottom]);
       start = lastBottom;
     }
-    lastBottom = Math.max(lastBottom, b.bottom);
+    curCol = s.col;
+    lastBottom = Math.max(lastBottom, s.bottom);
   }
   pages.push([start, fullHeight]);
 

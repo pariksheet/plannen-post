@@ -57,6 +57,18 @@ Per-section and per-channel failures **never abort the run** (see `reference/fai
 (fallback `Europe/Brussels`). Expand `{{since_last_edition}}` (see
 `reference/sources.md`). Compute masthead vars: dateline, issue number (days since
 `2026-01-01`, 3-digit), printed time (`"HH:MM am"` lowercase).
+- **Timezone applies to *times*, not just the date.** Source timestamps are
+  usually **UTC** (ISO with a `Z` suffix — e.g. MCP event `start_date`/`end_date`
+  like `2026-06-05T16:15:00.000Z`). Convert every displayed time to
+  `profile.defaults.timezone` before writing it, and never print a raw `Z`
+  wall-clock — it lands hours early.
+  - **Convert deterministically — don't eyeball the offset.** DST and offset vary
+    by zone *and* date, so mental math is unsafe for arbitrary zones. Shell out,
+    e.g.:
+    `python3 -c "import sys;from datetime import datetime;from zoneinfo import ZoneInfo;print(datetime.fromisoformat(sys.argv[1].replace('Z','+00:00')).astimezone(ZoneInfo(sys.argv[2])).strftime('%H:%M'))" 2026-06-05T16:15:00Z "$TZ"`
+    → `18:15` for `Europe/Brussels`, `02:15` (next day) for `Australia/Sydney`,
+    `21:45` for `Asia/Kolkata`. Works for any IANA zone. Sanity-check against
+    recurring cadence / calendar notices, which already state local time.
 
 **2. Read prior memory (continuity).** Read the most recent 1–3
 `~/.post/memory/*.json` sidecars; keep their `carryover`, `inbox_surfaced`,
@@ -84,7 +96,8 @@ Per-section and per-channel failures **never abort the run** (see `reference/fai
   Also emit per-section `carryover`, `inbox_surfaced`, and updated `open_items`.
 
 **5. Pass 2 — deterministic assembly.** Build the HTML from the theme + component
-kit; flow dynamic sections to balance columns; substitute masthead; write the
+kit; place sections into their page-column (left = day, center = feeds, right =
+personal — each column renders as one page); substitute masthead; write the
 plain-text digest. Full rules in **`reference/components.md`**.
 
 **6. Write working memory.** Write the edition to `~/.post/memory/${TODAY}.html`

@@ -83,9 +83,13 @@
     }
 
     /* ---------- column grid --------------------------------------------- */
+    /* Three columns, each rendered as one phone page by render-shot.js:
+       left = the day (events · lead · weather), center = the feeds (dynamic
+       sections), right = personal (inbox · sign-off). Left carries the oversized
+       lead headline, so it gets the most width. */
     .columns {
       display: grid;
-      grid-template-columns: 1fr 1.7fr 1fr;
+      grid-template-columns: 1.5fr 1.25fr 1fr;
       gap: 36px;
     }
     @media (max-width: 900px) {
@@ -242,18 +246,16 @@
 
       <div class="col col-left">
         <!-- {{events}} -->
-        <!-- {{dynamic.left}} -->
+        <!-- {{intro}} -->
+        <!-- {{weather}} -->
       </div>
 
       <div class="col col-center">
-        <!-- {{intro}} -->
         <!-- {{dynamic.center}} -->
       </div>
 
       <div class="col col-right">
-        <!-- {{weather}} -->
         <!-- {{inbox}} -->
-        <!-- {{dynamic.right}} -->
         <!-- {{outro}} -->
       </div>
 
