@@ -1,21 +1,22 @@
-<!--
-  config.pari.example.md — a REAL-WORLD, fully-loaded config.
-
-  This is the maintainer's actual setup, shown as a "what a rich config looks
-  like" reference. It integrates the separate **plannen** product
-  (https://github.com/pariksheet/plannen) for family events + watched events,
-  adds an air-quality (pollen) source alongside weather, four web-search beats
-  (sport/news/tech/startup), the two-bucket inbox, and PNG-to-WhatsApp delivery.
-
-  For a from-scratch generic starter that needs NO plannen, see config.example.md.
-  Carries logical names only — no secrets. Bindings live in profile.yaml.
--->
 ---
+# =============================================================================
+# config.pari.example.md — a real-world, fully-loaded config (the maintainer's
+# actual setup), shown as a "what a rich config looks like" reference.
+#
+# It integrates the separate plannen product (github.com/pariksheet/plannen) for
+# family events + watched events, adds an air-quality (pollen) source alongside
+# weather, four web-search beats (sport/news/tech/startup), the two-bucket inbox,
+# and PNG-to-WhatsApp delivery.
+#
+# For a from-scratch generic starter that needs NO plannen, see config.example.md.
+# Carries logical names only — no secrets. Bindings live in profile.yaml.
+# =============================================================================
+
 masthead:
   title: "THE PLANNEN POST"
   theme: classic
 
-# ── sources (data in) ─────────────────────────────────────────────────────────
+# ── sources (data in) ────────────────────────────────────────────────────────
 sources:
   - name: weather                       # open-meteo forecast — Mechelen
     type: http
@@ -52,53 +53,53 @@ sources:
     type: mcp
     tool: plannen.get_watch_queue
 
-# ── sections ──────────────────────────────────────────────────────────────────
+# ── sections ─────────────────────────────────────────────────────────────────
 sections:
-  - id: intro    
-    slot: spine    
+  - id: intro
+    slot: spine
     kind: ai-intro
-  - id: weather  
-    slot: spine    
-    source: [weather, pollen]  
+  - id: weather
+    slot: spine
+    source: [weather, pollen]
     component: card
-  - id: events   
-    slot: spine    
-    source: plannen            
+  - id: events
+    slot: spine
+    source: plannen
     component: list
-  - id: inbox    
-    slot: spine    
-    source: [inbox_new, inbox_open]  
+  - id: inbox
+    slot: spine
+    source: [inbox_new, inbox_open]
     component: list
-  - id: sport    
-    slot: dynamic  
-    source: sport              
-    component: card  
+  - id: sport
+    slot: dynamic
+    source: sport
+    component: card
     when: present
-  - id: news     
-    slot: dynamic  
-    source: news               
-    component: list  
+  - id: news
+    slot: dynamic
+    source: news
+    component: list
     when: present
-  - id: tech     
-    slot: dynamic  
-    source: tech               
-    component: card  
+  - id: tech
+    slot: dynamic
+    source: tech
+    component: card
     when: present
-  - id: startup  
-    slot: dynamic  
-    source: startup            
-    component: list  
+  - id: startup
+    slot: dynamic
+    source: startup
+    component: list
     when: present
-  - id: watches  
-    slot: dynamic  
-    source: watches            
-    component: list  
+  - id: watches
+    slot: dynamic
+    source: watches
+    component: list
     when: present
-  - id: outro    
-    slot: spine    
+  - id: outro
+    slot: spine
     kind: ai-outro
 
-# ── delivery ──────────────────────────────────────────────────────────────────
+# ── delivery ─────────────────────────────────────────────────────────────────
 deliver:
   - to: whatsapp
     format: png
