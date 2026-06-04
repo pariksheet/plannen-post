@@ -13,7 +13,7 @@ A Claude Code plugin that composes a **personalised morning newspaper** from dat
 
 ## What you get
 
-- **One page that ties it together** — your calendar, the few emails that actually matter, weather/pollen, and the beats you follow (sport, tech, local news), written as tight prose instead of a dump.
+- **One page that ties it together** — your calendar, the few emails that actually matter, the weather, and the beats you follow (sport, tech, local news), written as tight prose instead of a dump.
 - **Delivered where you read** — a PNG to WhatsApp, a Gmail draft, Telegram, or a file. You choose.
 - **Private by design** — no database, no server, no account. State is two small local files plus a rolling 7-day memory.
 - **Uses whatever you have** — a section whose source isn't connected is simply skipped; the rest still composes.
