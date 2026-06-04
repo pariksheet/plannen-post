@@ -1,6 +1,6 @@
 ---
 name: post-setup
-description: Interactive first-time setup for plannen-post. Use when the user runs `/plannen-post:setup`, asks to set up / configure / onboard the Post, or says "help me build my morning newspaper". Detects connected MCPs, walks the user through their sections conversationally, previews the edition, configures delivery, and offers to schedule.
+description: Interactive first-time setup for plannen-post. Use when the user runs `/post-setup`, asks to set up / configure / onboard the Post, or says "help me build my morning newspaper". Detects connected MCPs, walks the user through their sections conversationally, previews the edition, configures delivery, and offers to schedule.
 allowed-tools: Read Write Bash WebSearch WebFetch
 ---
 
@@ -20,7 +20,7 @@ the **intent-portable / bindings-local** split and the **security rule** (only t
 profile may define `cli` sources or shell sinks).
 
 If `~/.post/config.md` already exists, ask whether to reconfigure from scratch or
-edit the existing one (`/plannen-post:post-config` opens it) before proceeding.
+edit the existing one (`/post-config` opens it) before proceeding.
 
 ---
 
@@ -112,7 +112,7 @@ Write the resolved sinks + render + any secrets/must-watch into `~/.post/profile
 Ask if they want it to run automatically. If yes, offer:
 
 - **Claude Code `/schedule`** — simplest: tell them to run, e.g.
-  `/schedule "daily at 07:00 <their tz>: /plannen-post:post"`.
+  `/schedule "daily at 07:00 <their tz>: /post"`.
 - **macOS launchd** (for "run at 06:00, and if the Mac was off, catch up on boot") —
   generate a LaunchAgent from `scripts/`: substitute the real **repo path** and
   **node path** (`dirname $(command -v node)`) into a plist at
@@ -125,8 +125,8 @@ Ask if they want it to run automatically. If yes, offer:
 ## Step 7 — Done
 
 Summarise: which sections, which delivery, the schedule (if any), and the two file
-paths. Tell them `/plannen-post:post` runs it anytime and
-`/plannen-post:post-config` reopens the config.
+paths. Tell them `/post` runs it anytime and
+`/post-config` reopens the config.
 
 ---
 

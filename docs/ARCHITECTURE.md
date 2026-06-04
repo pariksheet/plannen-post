@@ -313,7 +313,7 @@ said…". This is editorial behaviour (prose), not a structural rule.
 ## 10. Setup & onboarding
 
 Skills/plugins have no executable install hook, so onboarding is a
-**user-triggered command** (`/plannen-post:setup`) that:
+**user-triggered command** (`/post-setup`) that:
 
 1. **Introspects the live tool list** — sees which `mcp__*` tools are connected.
 2. **Proposes sections** for what it found ("you have Gmail, plannen, a weather
@@ -332,7 +332,7 @@ editing, exit cleanly with "edit, then run again."
 No scheduler ships in the plugin. Wire it via Claude Code's `/schedule`:
 
 ```
-/schedule "weekdays at 07:00 Europe/Brussels: /plannen-post:post"
+/schedule "weekdays at 07:00 Europe/Brussels: /post"
 ```
 
 The routine inherits MCP servers and shell env captured at schedule time.

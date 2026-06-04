@@ -25,18 +25,21 @@ Install — in any Claude Code session:
 ```text
 /plugin marketplace add pariksheet/plannen-post
 /plugin install plannen-post@plannen-post
+/reload-plugins
 ```
+
+Run the commands one at a time. The `/reload-plugins` step (or restarting the session) is what makes the new commands available.
 
 Set it up — detects your connected MCPs and builds your config conversationally, with a live preview:
 
 ```text
-/plannen-post:post-setup
+/post-setup
 ```
 
 Run today's edition any time:
 
 ```text
-/plannen-post:post
+/post
 ```
 
 ## How it works
@@ -50,4 +53,4 @@ Two small local files drive everything: **`~/.post/config.md`** — the portable
 
 ---
 
-**Want more?** Run **`/plannen-post:help`** in any session for the full guide — sources & sections, scheduling, themes, and troubleshooting — or read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+**Want more?** Run **`/post-help`** in any session for the full guide — sources & sections, scheduling, themes, and troubleshooting — or read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).

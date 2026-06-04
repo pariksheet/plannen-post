@@ -1,6 +1,6 @@
 ---
 name: post-compose
-description: Compose and dispatch a personalised morning newspaper. Use when the user runs `/plannen-post:post`, asks for "the post", "today's post", "send my morning post", or otherwise asks plannen-post to compose and deliver today's edition.
+description: Compose and dispatch a personalised morning newspaper. Use when the user runs `/post`, asks for "the post", "today's post", "send my morning post", or otherwise asks plannen-post to compose and deliver today's edition.
 allowed-tools: Read Write Bash WebSearch WebFetch
 ---
 
@@ -48,8 +48,8 @@ Per-section and per-channel failures **never abort the run** (see `reference/fai
   `${CLAUDE_PLUGIN_ROOT}/examples/config.example.md` → `~/.post/config.md` and
   `examples/profile.example.yaml` → `~/.post/profile.yaml`; open the config
   (`${EDITOR:-vi} ~/.post/config.md`); print "First-run setup — edit
-  `~/.post/config.md` (and `profile.yaml`), then run `/plannen-post:post` again."
-  and exit. (Suggest `/plannen-post:setup` for a guided alternative.)
+  `~/.post/config.md` (and `profile.yaml`), then run `/post` again."
+  and exit. (Suggest `/post-setup` for a guided alternative.)
 - Malformed frontmatter → print the first parse error verbatim, exit. Don't repair.
 - `profile.yaml` may be absent → treat as empty (all-MCP setups need almost nothing); unresolved sinks/secrets are handled by capability-gating in step 7.
 

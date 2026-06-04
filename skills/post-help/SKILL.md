@@ -1,6 +1,6 @@
 ---
 name: post-help
-description: Explains plannen-post to the user — what it is, prerequisites, setup, the config/profile split, sources & sections, scheduling, themes, what's out of scope, and troubleshooting. Loads when the user runs /plannen-post:help or asks how plannen-post works, how to set it up, schedule it, add a source, change the look, or why something failed.
+description: Explains plannen-post to the user — what it is, prerequisites, setup, the config/profile split, sources & sections, scheduling, themes, what's out of scope, and troubleshooting. Loads when the user runs /post-help or asks how plannen-post works, how to set it up, schedule it, add a source, change the look, or why something failed.
 allowed-tools: Read
 ---
 
@@ -54,7 +54,7 @@ profile is nearly empty. See `examples/` for both files.
 **Recommended — interactive:**
 
 ```text
-/plannen-post:post-setup
+/post-setup
 ```
 
 Detects your connected MCPs, learns a little about you, walks your sections
@@ -65,7 +65,7 @@ after you sign off.
 **Manual first run:**
 
 ```text
-/plannen-post:post
+/post
 ```
 
 With no config it copies the bundled examples to `~/.post/`, opens the config in
@@ -74,7 +74,7 @@ With no config it copies the bundled examples to `~/.post/`, opens the config in
 - **`config.example.md`** — generic, plannen-free (Gmail + Calendar + open-meteo + web search), degrades gracefully.
 - **`config.pari.example.md`** — a rich real-world reference (plannen, pollen, four web-search beats, PNG-to-WhatsApp).
 
-`/plannen-post:post-config` reopens the config in `$EDITOR` later.
+`/post-config` reopens the config in `$EDITOR` later.
 
 ## Sources & sections
 
@@ -122,7 +122,7 @@ report lists what was dropped.
 ## Scheduling
 
 - **Claude Code `/schedule`** — quickest:
-  `/schedule "daily at 06:00 Europe/Brussels: /plannen-post:post"`. The routine
+  `/schedule "daily at 06:00 Europe/Brussels: /post"`. The routine
   inherits the MCP servers + shell environment captured when `/schedule` ran.
 - **macOS launchd** (in `scripts/`) — for "run at 06:00, and if the Mac was off,
   attempt after bootup." `scripts/post-wrapper.sh` + a `LaunchAgent` with

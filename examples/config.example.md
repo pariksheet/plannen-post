@@ -14,7 +14,7 @@
 # *nothing but* the weather source and still get a paper, then light up more
 # sections as you connect MCPs.
 #
-# Easiest way to build YOUR version: run `/plannen-post:setup` — it detects your
+# Easiest way to build YOUR version: run `/post-setup` — it detects your
 # connected MCPs and scaffolds a config tailored to what you actually have.
 #
 # This file is the PORTABLE content brief: logical names only, NO secrets, NO

@@ -1,5 +1,5 @@
 ---
-name: help
+name: post-help
 description: Explain plannen-post — what it is, how it works, setup, sources & sections, scheduling, themes, and troubleshooting.
 argument-hint: ""
 ---

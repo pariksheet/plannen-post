@@ -18,7 +18,7 @@ Open the plannen-post config for editing.
    ${EDITOR:-vi} ~/.post/config.md
    ```
 
-3. After the editor exits, do **not** validate. The next `/plannen-post:post` run will fail loudly on malformed frontmatter.
+3. After the editor exits, do **not** validate. The next `/post` run will fail loudly on malformed frontmatter.
 
 Remember the split: `config.md` is the portable content brief (no secrets);
 `profile.yaml` holds the machine-local bindings (keys, chat ids, must-watch

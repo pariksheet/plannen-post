@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Wraps `claude -p "/plannen-post:post"` for unattended launchd runs.
+# Wraps `claude -p "/post"` for unattended launchd runs.
 #
 #   - per-day idempotency guard: if today's edition already exists in memory/,
 #     exit silently. This makes RunAtLoad safe — a boot/wake catch-up never
@@ -56,7 +56,7 @@ echo "=== $(date -Iseconds) start ($TODAY) ===" >> "$LOG"
 OUTPUT="$(claude -p \
   --plugin-dir "$REPO_ROOT" \
   --permission-mode bypassPermissions \
-  "/plannen-post:post" \
+  "/post" \
   2>>"$ERR")"
 EXIT=$?
 
