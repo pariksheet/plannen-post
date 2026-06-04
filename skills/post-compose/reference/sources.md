@@ -14,6 +14,11 @@ error, missing secret), capture `{source, error}` and continue — never abort.
 | `cli` | **Only if defined in the profile** (security rule). Run the profile's command, capture stdout. A config naming a `cli` source the profile doesn't define → skip with a warning. |
 | `file` | Read the path (taken from the profile if machine-specific). |
 
+**Timestamps are UTC.** MCP results (e.g. plannen events) carry instants in UTC —
+ISO with a `Z` suffix, like `2026-06-05T16:15:00.000Z`. Convert to
+`profile.defaults.timezone` before displaying any time in a section (see SKILL step
+1). Raw `Z` times render 1–2 h early.
+
 **Runtime token.** `{{since_last_edition}}` inside a source's `args` is substituted
 in run-flow step 1: the date of the newest `~/.post/memory/YYYY-MM-DD.html` becomes
 `after:YYYY/MM/DD`; if memory is empty, `newer_than:1d`. (This makes Monday reach

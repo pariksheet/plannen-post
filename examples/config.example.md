@@ -1,32 +1,33 @@
-<!--
-  config.example.md — a GENERIC starter. No plannen, no exotic MCPs.
-
-  It uses only widely-available sources, so it works for most people:
-    • weather  → open-meteo over HTTP (keyless — just change the lat/long)
-    • events   → Google Calendar MCP   (optional; skipped if not connected)
-    • inbox    → Gmail MCP             (optional; skipped if not connected)
-    • news     → web search            (built-in)
-    • intro/outro → the model, from everything gathered
-
-  Graceful degradation: a section whose source isn't connected is simply skipped
-  with a warning — the rest of the paper still composes. So you can run this with
-  *nothing but* the weather source and still get a paper, then light up more
-  sections as you connect MCPs.
-
-  Easiest way to build YOUR version: run `/plannen-post:setup` — it detects your
-  connected MCPs and scaffolds a config tailored to what you actually have.
-
-  This file is the PORTABLE content brief: logical names only, NO secrets, NO
-  personal identifiers, NO shell. Machine bindings live in profile.yaml.
-  For a rich real-world config, see config.pari.example.md.
--->
 ---
+# =============================================================================
+# config.example.md — a GENERIC starter. No plannen, no exotic MCPs.
+#
+# Uses only widely-available sources, so it works for most people:
+#   • weather      → open-meteo over HTTP (keyless — just change the lat/long)
+#   • events       → Google Calendar MCP  (optional; skipped if not connected)
+#   • inbox        → Gmail MCP            (optional; skipped if not connected)
+#   • news         → web search           (built-in)
+#   • intro/outro  → the model, from everything gathered
+#
+# Graceful degradation: a section whose source isn't connected is simply skipped
+# with a warning — the rest of the paper still composes. So you can run this with
+# *nothing but* the weather source and still get a paper, then light up more
+# sections as you connect MCPs.
+#
+# Easiest way to build YOUR version: run `/plannen-post:setup` — it detects your
+# connected MCPs and scaffolds a config tailored to what you actually have.
+#
+# This file is the PORTABLE content brief: logical names only, NO secrets, NO
+# personal identifiers, NO shell. Machine bindings live in profile.yaml.
+# For a rich real-world config, see config.pari.example.md.
+# =============================================================================
+
 masthead:
   title: "THE PLANNEN POST"
   # family: "the Smith family"     # optional — appears in the dateline
   theme: classic
 
-# ── sources (data in) ─────────────────────────────────────────────────────────
+# ── sources (data in) ────────────────────────────────────────────────────────
 # type: mcp | http | web-search | cli | file. Logical `name` is referenced below.
 sources:
   - name: weather                  # open-meteo forecast — KEYLESS. Change lat/long.
@@ -55,35 +56,35 @@ sources:
     type: web-search
     query: "top world news headlines today"
 
-# ── sections ──────────────────────────────────────────────────────────────────
+# ── sections ─────────────────────────────────────────────────────────────────
 # slot: spine = always present; dynamic = appears only when its source has data.
 # component: card | list | stat | quote | two-col | photo
 sections:
-  - id: intro    
-    slot: spine    
+  - id: intro
+    slot: spine
     kind: ai-intro
-  - id: weather  
-    slot: spine    
-    source: weather                
+  - id: weather
+    slot: spine
+    source: weather
     component: card
-  - id: events   
-    slot: spine    
-    source: calendar               
+  - id: events
+    slot: spine
+    source: calendar
     component: list
-  - id: inbox    
-    slot: spine    
-    source: [inbox_new, inbox_open]  
+  - id: inbox
+    slot: spine
+    source: [inbox_new, inbox_open]
     component: list
-  - id: news     
-    slot: dynamic  
-    source: news                   
-    component: list  
+  - id: news
+    slot: dynamic
+    source: news
+    component: list
     when: present
-  - id: outro    
-    slot: spine    
+  - id: outro
+    slot: spine
     kind: ai-outro
 
-# ── delivery ──────────────────────────────────────────────────────────────────
+# ── delivery ─────────────────────────────────────────────────────────────────
 # Universal default: a Gmail draft you review and send. `format: html`.
 # To send the rendered newspaper as a PNG image to WhatsApp/Telegram instead,
 # add a render capability in profile.yaml and use `format: png` (see below).

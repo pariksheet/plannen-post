@@ -83,15 +83,27 @@
     }
 
     /* ---------- column grid --------------------------------------------- */
+    /* Three columns, each rendered as one phone page by render-shot.js:
+       left = the day (events · lead · weather), center = the feeds (dynamic
+       sections), right = personal (inbox · sign-off). Left carries the oversized
+       lead headline, so it gets the most width. */
     .columns {
       display: grid;
-      grid-template-columns: 1fr 1.7fr 1fr;
+      grid-template-columns: 1.5fr 1.25fr 1fr;
       gap: 36px;
     }
     @media (max-width: 900px) {
+      /* Phone-shaped render: single column + larger type so each page arrives
+         legible at ~1:1 on a phone instead of being downscaled into a sliver. */
       .columns { grid-template-columns: 1fr; gap: 24px; }
-      body { padding: 24px 20px; }
-      .masthead h1 { font-size: 48px; }
+      body { padding: 24px 22px; font-size: 18px; line-height: 1.55; }
+      .masthead h1 { font-size: 40px; }
+      .post-section .body,
+      .post-section--weather .body,
+      .post-section--outro .body { font-size: 17px; }
+      .post-section .body .faint { font-size: 15px; }
+      .post-section--intro h2.hand { font-size: 40px; }
+      .post-section .kicker { font-size: 11px; }
     }
 
     .col { min-width: 0; }
@@ -234,18 +246,16 @@
 
       <div class="col col-left">
         <!-- {{events}} -->
-        <!-- {{dynamic.left}} -->
+        <!-- {{intro}} -->
+        <!-- {{weather}} -->
       </div>
 
       <div class="col col-center">
-        <!-- {{intro}} -->
         <!-- {{dynamic.center}} -->
       </div>
 
       <div class="col col-right">
-        <!-- {{weather}} -->
         <!-- {{inbox}} -->
-        <!-- {{dynamic.right}} -->
         <!-- {{outro}} -->
       </div>
 

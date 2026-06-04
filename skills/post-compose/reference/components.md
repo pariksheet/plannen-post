@@ -34,14 +34,24 @@ New info → a new section built **from existing components**, never new styles.
 
 ## Placement
 
-- **Spine** sections → their named slot: replace `<!-- {{<id>}} -->`
-  (`intro`, `weather`, `events`, `inbox`, `outro`).
-- **Dynamic** sections → flow into the dynamic zone to balance columns: fill
-  `<!-- {{dynamic.left}} -->` and `<!-- {{dynamic.center}} -->` first (and
-  `<!-- {{dynamic.right}} -->` only if needed), appending each to whichever
-  marker's column is currently **shortest** by rough rendered height. Never leave
-  one column long and another empty.
-- A slot with no matching/failed section → empty string; the column collapses.
+Each template column renders as **one phone page** — `render-shot.js` starts a new
+page at every column boundary. So placement is by column (= by page), not by
+balancing height:
+
+- **Left column — the day** (page 1): `<!-- {{events}} -->`, then
+  `<!-- {{intro}} -->` (the lead), then `<!-- {{weather}} -->`.
+- **Center column — the feeds** (page 2): every **dynamic** section, in config
+  order, into `<!-- {{dynamic.center}} -->` (`sport`, `news`, `tech`, `startup`,
+  `watches`, and any improvised dynamic section).
+- **Right column — personal** (page 3): `<!-- {{inbox}} -->`, then
+  `<!-- {{outro}} -->` (the sign-off).
+
+- A slot with no matching/failed section → empty string. An empty **column** emits
+  no page at all (e.g. a quiet day with no dynamic sections → 2 pages, not a blank
+  middle one).
+- Don't reshuffle sections across columns to even out height — the page identities
+  (day / feeds / personal) matter more than equal page lengths. A long column just
+  makes a taller page (or splits by height as a fallback).
 
 ## Masthead substitution
 
