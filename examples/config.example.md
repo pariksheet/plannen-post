@@ -52,6 +52,14 @@ sources:
     tool: gmail.search_threads
     args: { query: "in:inbox -in:sent newer_than:7d -category:promotions -category:social -from:notifications@github.com -from:no-reply -from:noreply", max_results: 30 }
 
+  - name: inbox_sent               # threads where YOU wrote last — to flag "no reply yet"
+    type: mcp
+    tool: gmail.search_threads
+    # Lets the post say "No response yet from <sender>" for mail you're still
+    # waiting on. Catches sent-only threads (e.g. a fresh request with no inbound)
+    # that inbox_open would miss entirely.
+    args: { query: "in:sent newer_than:7d", max_results: 25 }
+
   - name: news                     # headlines via web search — tailor the query
     type: web-search
     query: "top world news headlines today"
@@ -73,7 +81,7 @@ sections:
     component: list
   - id: inbox
     slot: spine
-    source: [inbox_new, inbox_open]
+    source: [inbox_new, inbox_open, inbox_sent]
     component: list
   - id: news
     slot: dynamic
@@ -115,10 +123,18 @@ Two buckets.
 deadlines, money. Sender, one-line summary, why it matters. Skip newsletters/bulk.
 Note how many others are tucked away.
 
-**Still-open rail** (from inbox_open): read-but-unanswered threads where the ball
-is in your court — keep only those whose *latest message isn't from you* AND that
-are from your must-watch senders (resolved from the local profile) or clearly
-await a reply. Cap at ~3. Memory escalates by shown_count and drops once replied.
+**Still-open rail** (from inbox_open + inbox_sent): read each thread in full —
+*your own sent replies included* — and judge it by the last message's author AND
+content, not just who spoke last. Three outcomes:
+- **Ball in your court** — their latest message asks/expects something you haven't
+  answered → surface it as yours to handle.
+- **Waiting on them** — your message is the latest and they haven't replied →
+  surface as *"No response yet from <sender>"* with how long. Limit to your
+  must-watch senders or threads where a reply is clearly expected — don't nag
+  every sent mail.
+- **Resolved** — the last message just acknowledges or closes the loop ("thanks",
+  "received", "perfect"), even from them → drop it; never flag a done thread.
+Cap at ~3. Memory escalates by shown_count and drops once a thread is resolved.
 
 ## news
 Up to 3 headlines worth knowing, one line each, neutral. Skip a quiet day.

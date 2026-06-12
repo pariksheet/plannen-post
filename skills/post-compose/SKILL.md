@@ -88,10 +88,24 @@ Per-section and per-channel failures **never abort the run** (see `reference/fai
   reminder", "follow-up on last week's thread"). If the past adds nothing, stay
   silent. Never narrate "yesterday we said…".
 - **Inbox** (if `inbox_new` / `inbox_open` exist): *main brief* from `inbox_new`
-  (the 3–5 that matter; note how many others are tucked away); *still-open rail*
-  from `inbox_open` (keep only threads whose **latest message is not the user's**
-  AND from `profile.inbox.must_watch` or clearly awaiting reply; cap ~3; use prior
-  `open_items` to escalate by `shown_count` and **drop** once the user has replied).
+  (the 3–5 that matter; note how many others are tucked away). *Still-open rail*
+  from `inbox_open`: read each candidate thread **end-to-end, the user's own sent
+  replies included**, and classify it by the **last message's author *and*
+  content** — never by position alone (a courteous "Perfect!" from the other side
+  is a close, not an open ask). Three outcomes:
+  - **awaiting the user** — the counterparty's latest message asks for or expects
+    something the user hasn't answered → surface as an action in the user's court.
+  - **awaiting the counterparty** — the user's latest message asked or delivered
+    something and there's been no reply → surface as *"No response yet from
+    <sender> (Nth day)"*. Gate these to `profile.inbox.must_watch` senders or
+    threads where a reply is clearly expected — don't nag every sent mail.
+  - **resolved** — the last message merely acknowledges or closes the loop
+    ("thanks / received / perfect / all set"), from **either** side, or the
+    counterparty has acknowledged something the user already sent → **drop**; never
+    flag a done thread.
+  When the snippet doesn't settle the state, fetch the thread (`get_thread`) for
+  rail candidates only. Cap ~3 total; use prior `open_items` to escalate by
+  `shown_count` and drop once a thread reaches *resolved*.
 - Each planned section: `{ id, kind|component, slot, kicker, tagline, body, byline? }`.
   Also emit per-section `carryover`, `inbox_surfaced`, and updated `open_items`.
 
