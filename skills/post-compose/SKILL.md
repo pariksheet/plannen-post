@@ -11,8 +11,8 @@ web search, HTTP, CLI, files), render it into a styled edition, and deliver it t
 the channels their config asks for.
 
 **Detail lives in `reference/` — read each file when you reach its step, not before:**
-- `reference/sources.md` — source types + gather rules (step 3)
-- `reference/components.md` — assembly, component kit, placement, masthead, digest (step 5)
+- `reference/sources.md` — source types + gather rules, join keys (step 3)
+- `reference/components.md` — assembly, component kit, cross-ref note, placement, masthead, digest (step 5)
 - `reference/delivery.md` — sinks, formats, fallback, security (step 7)
 - `reference/failure-modes.md` — what to do when things break
 - `${CLAUDE_PLUGIN_ROOT}/docs/ARCHITECTURE.md` — the full design, if anything is ambiguous
@@ -99,6 +99,12 @@ Per-section and per-channel failures **never abort the run** (see `reference/fai
     something and there's been no reply → surface as *"No response yet from
     <sender> (Nth day)"*. Gate these to `profile.inbox.must_watch` senders or
     threads where a reply is clearly expected — don't nag every sent mail.
+    **Not an open loop:** a submission *against a standing facility* — a
+    budget/allowance the user draws down, an expense or claims portal, a
+    reimbursement envelope, a recurring filing — where no reply is the normal flow.
+    Silence there is the process working, not a stall; never flag it as waiting.
+    (E.g. submitting invoices against a fixed education-reimbursement *budget* is
+    consumption, not a pending question.)
   - **resolved** — the last message merely acknowledges or closes the loop
     ("thanks / received / perfect / all set"), from **either** side, or the
     counterparty has acknowledged something the user already sent → **drop**; never
@@ -106,8 +112,58 @@ Per-section and per-channel failures **never abort the run** (see `reference/fai
   When the snippet doesn't settle the state, fetch the thread (`get_thread`) for
   rail candidates only. Cap ~3 total; use prior `open_items` to escalate by
   `shown_count` and drop once a thread reaches *resolved*.
+  - **Reconcile loops by entity, not by thread.** A reply often arrives in a
+    *different* thread — a fresh subject, or a ticketing/no-reply address — so the
+    original thread still ends on the user's message and falsely reads *awaiting the
+    counterparty* forever. Before re-surfacing any carried `open_item` as "no
+    response yet," scan **all** recent mail (not just its thread) for a newer inbound
+    that matches the loop's **signature**, then reclassify on that match. Persist the
+    signature on each `open_item` as `match: { sender, ref, topic }`:
+    - **`ref` is the strong key** — a case/ticket/invoice number (e.g.
+      `CASE-10293`). Run one targeted search for the ref token; a newer inbound hit
+      *anywhere* closes or advances the loop. Highest precision — prefer it.
+    - **`sender` + `topic` is the fallback** when there's no ref.
+    - **`sender` alone is never sufficient.** One counterparty often runs several
+      parallel cases (same HR/finance address, different refs); matching on sender
+      would wrongly resolve loop A the moment an unrelated reply B from the same
+      sender lands. Disambiguate by ref/topic, always.
 - Each planned section: `{ id, kind|component, slot, kicker, tagline, body, byline? }`.
   Also emit per-section `carryover`, `inbox_surfaced`, and updated `open_items`.
+
+**4.5 Pass 1.5 — reconcile across sections.** Pass 1 writes each section blind to
+the others. This step is the *only* place the plan is read as a whole — it removes
+duplication and draws connections, working on the **structured section objects**, not
+rendered HTML. No new sources. Two parts:
+
+- **De-dup by ownership.** Every fact has exactly one canonical home:
+  - a scheduled item → **events** · an email thread → **inbox** · the forecast →
+    **weather** · a news/feed item → its dynamic section.
+  - If a fact also surfaces in a non-owner section, the non-owner **drops it** or
+    demotes it to a one-line pointer ("more in today's events") — never restates it.
+  - The **lead (`ai-intro`)** is the one exception: it may reference any fact, but
+    only if it adds an *angle* (why it's the day's headline), never a verbatim echo
+    of the owning section.
+
+- **Correlate — inline on the owning event.** Join sections on a **concrete shared
+  key — time window, location, or person** — never on theme or vibe. For each event,
+  scan the other sections' data for an intersection and attach a `cross_refs[]` entry
+  to that event **only when the connection is *actionable*** — i.e. it changes what
+  the user would do:
+  - weather hazard during an event whose `outdoor`/category says it's exposed → attach
+    (e.g. *hail 18:00 ⨯ outdoor skating*); the **same hazard during an indoor event →
+    stay silent**. Over-correlation trains the reader to ignore the post — silence is
+    the safer default.
+  - two events whose windows collide, or whose back-to-back travel time doesn't fit →
+    attach to the earlier one.
+  - an inbox thread *about* an event happening today → attach to the event.
+  - Each `cross_refs` entry: `{ note, severity? }` — one terse clause, present tense.
+    Cap **one per event**, the most actionable; if none clears the actionability bar,
+    attach nothing. Correlations live on the event, never as their own section (a
+    "connections" box would just re-introduce the duplication de-dup just removed).
+
+Emit the reconciled plan (sections with `cross_refs` populated, duplicates pruned)
+to Pass 2. The join only works if the gathered data carries keys — see
+`reference/sources.md` for the event/weather fields it needs.
 
 **5. Pass 2 — deterministic assembly.** Build the HTML from the theme + component
 kit; place sections into their page-column (left = day, center = feeds, right =

@@ -32,6 +32,19 @@ Render each planned section as an `<article>` (omit blocks for absent fields):
 
 New info → a new section built **from existing components**, never new styles.
 
+## Cross-ref note (Pass 1.5 correlations)
+
+An event carrying `cross_refs[]` (from run-flow step 4.5) renders each entry as an
+inline note **inside that event's own markup** — never as a separate section. Append
+it to the event's body item, reusing existing styling (no new CSS):
+
+```html
+<li>Outdoor football · 18:00 <span class="pull">⚠ hail forecast for that window</span></li>
+```
+
+Use the `pull` emphasis (or a plain trailing clause) so the note reads as a heads-up
+attached to the item, not a new line of its own. One note per event, max.
+
 ## Placement
 
 Each template column renders as **one phone page** — `render-shot.js` starts a new

@@ -29,3 +29,21 @@ back to Friday and covers skipped days.)
 
 `ai-intro` / `ai-outro` sections have no source — they are composed in Pass 1 from
 everything gathered.
+
+**Join keys (for Pass 1.5 reconcile).** The cross-section correlation step can only
+join on keys that survive gathering, so preserve them:
+- **events** — keep `start`/`end` (converted to local time), `location`, and an
+  `outdoor` flag or category hint (sport/outing vs. class/indoor). Without these an
+  event can't be matched against weather, another event, or an inbox thread.
+- **weather** — keep the **hourly** breakdown, not just the daily summary, so a
+  hazard can be pinned to its hour window. A daily-only forecast makes "hail at
+  18:00" invisible to the join. With open-meteo, request
+  `hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_gusts_10m`
+  and `forecast_days=2` (so *tomorrow's* events can correlate too). A given hour is a
+  **hazard** when its `weather_code` is a thunderstorm/hail/heavy band (WMO `95`,
+  `96`, `99` = thunderstorm ± hail; `65`/`82` = heavy rain/violent showers;
+  `75`/`86` = heavy snow), or `wind_gusts_10m` is high (≳60 km/h). The hourly data is
+  **join fuel only** — the weather *card* still renders the daily summary, never an
+  hour-by-hour dump.
+Sources that don't expose these keys simply yield no correlations — the post still
+renders; it just can't draw that connection.
