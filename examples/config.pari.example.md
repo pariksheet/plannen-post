@@ -20,7 +20,7 @@ masthead:
 sources:
   - name: weather                       # open-meteo forecast — Mechelen
     type: http
-    url: "https://api.open-meteo.com/v1/forecast?latitude=51.03&longitude=4.48&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code,uv_index_max&timezone=Europe%2FBrussels&forecast_days=1"
+    url: "https://api.open-meteo.com/v1/forecast?latitude=51.03&longitude=4.48&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code,uv_index_max&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_gusts_10m&models=best_match,knmi_harmonie_arome_netherlands,dwd_icon_d2,meteofrance_arome_france_hd,ecmwf_ifs025&timezone=Europe%2FBrussels&forecast_days=2"
     as: json
   - name: pollen                        # open-meteo air-quality — pollen per type
     type: http
@@ -37,6 +37,14 @@ sources:
     type: mcp
     tool: gmail.search_threads
     args: { query: "in:inbox -in:sent newer_than:7d -category:promotions -category:social -from:notifications@github.com -from:no-reply -from:noreply -from:support@mailgun.net -from:calendar-notification@google.com", max_results: 30 }
+  - name: inbox_sent                    # threads where I wrote last — to detect 'no reply yet'
+    type: mcp
+    tool: gmail.search_threads
+    # Recent threads I've sent into. The editorial pass checks each: if my message
+    # is the LATEST and the other side hasn't answered, it's a 'waiting on them'
+    # item → "No response yet from <sender>". Catches cold outreach with no inbound
+    # (e.g. a fresh quote request) that in:inbox would miss entirely.
+    args: { query: "in:sent newer_than:7d", max_results: 25 }
   - name: sport
     type: web-search
     query: "IPL T20 latest results and news; football hockey cricket matches near Mechelen Belgium this week"
@@ -68,7 +76,7 @@ sections:
     component: list
   - id: inbox
     slot: spine
-    source: [inbox_new, inbox_open]
+    source: [inbox_new, inbox_open, inbox_sent]
     component: list
   - id: sport
     slot: dynamic
@@ -118,6 +126,16 @@ chance if non-trivial. **From April through September only**, add a pollen line
 moderate+ since I'm allergic) and the UV index. Outside those months, just the
 forecast. Note persistence vs the last edition ("grass pollen high — 3rd day").
 
+**Multi-model consensus.** The weather source returns several models, so fields are
+suffixed per model (e.g. `wind_gusts_10m_dwd_icon_d2`, `temperature_2m_max_ecmwf_ifs025`).
+For every headline number — and **especially wind gusts** — take the **median across
+models per hour**, never a single model. Report the peak gust as a consensus value
+*with its hour*, and when models disagree widely (range > ~25 km/h) give the spread,
+e.g. "peak gusts ~58 km/h around 21:00 (models split 18–106)". Never headline a lone
+outlier (AROME-HD in particular often runs the gustiest). Pin a gust/weather warning
+to the **event's actual hour**, not the day's peak — the 16:00–18:00 window can be
+calm while a 21:00 storm front spikes.
+
 ## events
 The day's events as a tight list — time, title, who, where; one line each. Lead
 with time-critical or newly added (kids' school/activities, my office days,
@@ -126,16 +144,26 @@ practices). Skip all-day noise.
 ## inbox
 Two buckets.
 
-**Main brief** (from inbox_new): the 3-5 that matter — real people, deadlines,
+**Main brief** (from inbox_new): up to 5 that matter — real people, deadlines,
 money. Includes unread plus anything important/starred since the last edition.
 Skip newsletters/bulk. Note how many others are tucked away.
 
-**Still-open rail** (from inbox_open): read-but-unanswered threads where the ball
-is in my court — keep only those whose *latest message is not from me* AND that
-are from my **must-watch senders** (resolved from the local profile) or where a
-reply is clearly expected. Cap at ~3. Use memory to escalate by shown_count ("3rd day
-waiting"), frame recurrences ("second reminder", "follow-up on last week's
-thread"), and drop an item once I've replied (latest message becomes mine).
+**Still-open rail** (from inbox_open + inbox_sent): read each thread *in full —
+including my own sent replies* — and judge the whole exchange, not just who spoke
+last. Three outcomes:
+- **Ball in my court** (mostly inbox_open) — their latest message asks/expects
+  something I haven't answered → surface it as mine to handle.
+- **Waiting on them** (mostly inbox_sent) — my message is the *latest* in the
+  thread and they haven't replied → surface as *"No response yet from <sender>"*
+  with how long ("3rd day"). Limit these to my **must-watch senders** (from the
+  profile) or where a reply is clearly expected (a question I asked, a quote I
+  requested, a follow-up I chased) — don't nag about every sent mail.
+- **Resolved** — the last message just acknowledges or closes the loop ("perfect",
+  "received", "thanks, all set"), even when it's from them, or they've confirmed
+  something I already sent → drop it; never flag a done thread.
+Cap at ~5 total. Use memory to escalate by shown_count and frame recurrences
+("second reminder", "follow-up on last week's thread"); drop once resolved. If a
+snippet doesn't make the state clear, read the thread before deciding.
 
 ## sport
 Two things. (1) IPL T20 — latest results/standings, **only while the IPL season is
