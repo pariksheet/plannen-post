@@ -1,0 +1,759 @@
+{
+  "name": "Plannen Post",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 6,
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      },
+      "id": "78594204-6371-4668-a290-cbefcef6e6c8",
+      "name": "Daily 06:30",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 25,
+        "filters": {
+          "q": "in:inbox",
+          "readStatus": "both",
+          "receivedAfter": "={{ $now.minus({ days: 2 }).toISO() }}"
+        }
+      },
+      "id": "3c94e0ee-fb27-4390-aff5-28ef7d376cf9",
+      "name": "Fetch Recent Mail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        0
+      ],
+      "webhookId": "d21142cb-7585-48f3-b65e-24db2548fe9a",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "emails",
+        "options": {}
+      },
+      "id": "82f78f67-0704-46ad-aa37-f503083da81d",
+      "name": "Aggregate Mail",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "numberInputs": 4
+      },
+      "id": "8cfed6ca-52dd-47f0-8222-3ac3ec0af389",
+      "name": "Join Sources",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        672,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.open-meteo.com/v1/forecast",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "latitude",
+              "value": "51.03"
+            },
+            {
+              "name": "longitude",
+              "value": "4.48"
+            },
+            {
+              "name": "daily",
+              "value": "temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code,uv_index_max"
+            },
+            {
+              "name": "hourly",
+              "value": "wind_gusts_10m"
+            },
+            {
+              "name": "models",
+              "value": "best_match,knmi_harmonie_arome_netherlands,dwd_icon_d2,meteofrance_arome_france_hd,ecmwf_ifs025"
+            },
+            {
+              "name": "timezone",
+              "value": "Europe/Brussels"
+            },
+            {
+              "name": "forecast_days",
+              "value": "2"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6094b3c1-53f6-41f9-9329-dec5e44a598a",
+      "name": "Fetch Weather",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        384
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YPmqhcmJUWL9EuTP",
+          "cachedResultName": "post_memory"
+        },
+        "limit": 3,
+        "orderBy": true,
+        "orderByColumn": "updatedAt"
+      },
+      "id": "f11ca44f-e33d-4142-b040-0eef29ece497",
+      "name": "Read Memory",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Compose today's edition of The Plannen Post for {{ $now.setZone(\"Europe/Brussels\").toFormat(\"cccc d LLLL yyyy\") }} (edition_date {{ $now.setZone(\"Europe/Brussels\").toFormat(\"yyyy-LL-dd\") }}).\n\nWORKFLOW (follow exactly): In your FIRST step, issue ALL tool calls together and in parallel — the plannen tools (briefing, list_events today, list_events tomorrow, list_obligations, get_watch_queue) AND exactly 4 Web Search calls (one each: sport, news, tech, startup). Make each call ONCE. Then, in your NEXT step, compose and return the final JSON. Do NOT make any further tool calls, retries, or follow-up searches after the first step. If a feed search is empty or errors, just omit that feed.\n\nThe dateline is REQUIRED and must be filled (Weekday · DD Mon · morning edition · emoji + high°C from Digest Weather). Inbox, sent mail, digested weather+pollen, and prior memory are below. Source times are UTC (Z) — convert to Europe/Brussels.\n\n=== INBOX (recent) ===\n{{ JSON.stringify($(\"Aggregate Mail\").first().json.emails || []) }}\n\n=== SENT (recent — for 'no reply yet' detection) ===\n{{ JSON.stringify($(\"Aggregate Sent\").first().json.emails || []) }}\n\n=== WEATHER + POLLEN (Mechelen, digested) ===\n{{ JSON.stringify($(\"Digest Weather\").first().json || {}) }}\n\n=== PRIOR MEMORY (recent sidecars) ===\n{{ JSON.stringify($(\"Read Memory\").all().map(r => r.json)) }}\n\nReturn ONLY a single raw JSON object with keys dateline, edition_date, sections[], sidecar — no markdown, no code fences, no commentary.",
+        "options": {
+          "systemMessage": "You are the editor of The Plannen Post, a personalised one-page newspaper rendered into a FIXED newsprint theme. Output a STRUCTURED plan the renderer fills into that theme — you write each body as inline HTML; the renderer supplies all CSS. Never restyle.\n\nOUTPUT SHAPE:\n- dateline: '{Weekday} · {DD} {Mon} · morning edition · {emoji} {high}°C' for today in Europe/Brussels. ALWAYS include the emoji and today's high — derive from the digested weather (today.sky → emoji: clear ☀, partly cloudy ⛅, overcast ☁, rain/showers 🌧, thunderstorm ⛈, snow ❄, fog 🌫; today.high → °C).\n- sections: an ORDERED array; each { id, column, kicker, tagline, byline?, body_html }.\n  - column places the section on its page: 'left' = the day (ids events, intro, weather, in that order); 'center' = the feeds (ids sport, news, tech, startup, watches — include ONLY if you have real data, else omit); 'right' = personal (id inbox); 'tomorrow' = the sign-off (id outro).\n  - kicker: short mono label. tagline: handwritten headline (short phrase). byline: intro only. body_html: inner HTML using ONLY <p>, <p class=\"faint\">, <ul><li>, <h3 class=\"hand\">, <strong>, <span class=\"faint\">; entities or unicode; times in Europe/Brussels.\n\nSECTION CONTENT:\n- events (left): <ul> of today's items '<li>HH:MM — <strong>Title</strong> · detail</li>' earliest first; end with one <p class=\"faint\"> of routines/practices + overdue todos. Fold an actionable cross-ref inline as '<span class=\"faint\">· ⚠ note</span>' (one per item) — for any wind/gust warning use the CONSENSUS gust (today.gust.kmh) at the EVENT's hour, never the day's peak or a lone outlier.\n- intro (left): the lead — 1–2 short <p> on the single most notable thing, plus byline.\n- weather (left): ALWAYS include. Use the DIGESTED weather (today.high/low, today.rain %, today.uv, today.sky). Mention wind ONLY if the consensus gust is notable (today.gust.kmh >= 35); use today.gust.kmh with its today.gust.hour, and if the spread is wide (today.gust.hi minus today.gust.lo > 25) phrase it as 'peak gusts ~X km/h around HH:00 (models Y–Z)' — never headline an outlier. April–September add a pollen line naming any type at moderate+ level (grass/birch/alder/mugwort/ragweed) — the user is allergic. Note UV if high. <p> with <strong>.\n- feeds (center): from the Web Search tool. sport = a card <p> (FIFA World Cup 2026 priority: Belgium last result / next fixture / group, then notable results & knockout picture). news = <ul> of top vrt.be Belgium + Mechelen-local items today. tech = a card <p> of Databricks' latest CONFIRMED, already-announced releases (no speculation, no 'watch for X'). startup = <ul> of new EU-AI VC rounds THIS week (company + amount + investor). Fill each ONLY from substantive, recent, specific results; OMIT any feed that returns nothing concrete. No marketing.\n- inbox (right): main items <ul> (real people, deadlines, money — skip bulk); then optional <h3 class=\"hand\">Still open</h3> + <ul>. Use SENT mail to detect 'No response yet from X' (your message is the latest and they haven't replied) — gate to clearly-expected replies; a submission against a standing facility (a budget you draw down, a reimbursement/claims portal, a recurring filing) is NOT an open loop.\n- watches (center): call get_watch_queue; emit ONLY if something changed (new date, registration open/close, moved); else omit.\n- outro (tomorrow): a 'Tomorrow' sign-off — tomorrow's key events (call list_events for tomorrow), tomorrow's weather (tomorrow.high/low/sky, gust if notable), bins, and a 'Still needing you' line; <p> + <ul>.\n\nSOURCES: plannen tools (get_briefing_context, get_daily_briefing, list_events today AND tomorrow, list_obligations, get_watch_queue) and the Web Search tool (Perplexity Sonar, real-time) for the feeds — call it with one focused query per feed. READ-ONLY — never create/update/delete. Inbox, sent, digested weather+pollen, prior memory are in the prompt.\n\nJUDGMENT:\n- ≤120 words/section, present tense, factual, no marketing, no emoji unless the data carries one.\n- De-dup by ownership: scheduled → events; email → inbox; forecast → weather; a web item → its feed. Non-owner only points. Lead may reference any fact only to add an angle.\n- Cross-refs inline only when actionable (weather hazard during an OUTDOOR event, colliding times, an email about today's event). Indoor hazard → silent. One per event.\n- Inbox three-state by the LAST message's author AND content: awaiting_user / awaiting_counterparty ('No response yet from X', but a standing facility is NOT an open loop) / resolved ('thanks/received/all set' either side → drop). Reconcile loops by ENTITY not thread (match on ref, else sender+topic; sender alone never).\n- Continuity gated: surface change-since-last-edition only when it adds signal (escalation, persistence, recurrence); else silent.\n- Never invent. Omit any section with no data.\n\nAlso emit sidecar { open_items[{sender,ref,topic,state,shown_count}], inbox_surfaced[], events_today[] } and edition_date (yyyy-mm-dd, Brussels). Return ONLY the structured object.",
+          "maxIterations": 12
+        }
+      },
+      "id": "33a831eb-628c-4007-95c9-b04c5459c333",
+      "name": "Compose Edition",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        896,
+        288
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-sonnet-4-6",
+          "mode": "list",
+          "cachedResultName": "Claude Sonnet 4.6"
+        },
+        "options": {
+          "maxTokensToSample": 16000
+        }
+      },
+      "id": "2ba7bfb5-c45b-49cc-94af-7033df422903",
+      "name": "Claude Opus",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.5,
+      "position": [
+        912,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp=$input.first().json;let out=(inp&&inp.output!==undefined)?inp.output:inp;if(typeof out==='string'){const s=out;let end=s.lastIndexOf('}');let parsed=null;while(end>=0&&!parsed){let depth=0,start=-1;for(let i=end;i>=0;i--){const c=s[i];if(c==='}')depth++;else if(c==='{'){depth--;if(depth===0){start=i;break;}}}if(start<0)break;try{const o=JSON.parse(s.slice(start,end+1));if(o&&(o.sections||o.dateline))parsed=o;}catch(e){}end=s.lastIndexOf('}',start-1);}out=parsed||{};}const sections=Array.isArray(out.sections)?out.sections:[];const dateline=out.dateline||'';const printed=$now.setZone('Europe/Brussels').toFormat('h:mm a').toLowerCase();const editionDate=out.edition_date||$now.setZone('Europe/Brussels').toFormat('yyyy-LL-dd');const art=(s)=>{const k=s.kicker?'<div class=\"kicker\">'+s.kicker+'</div>':'';const h=s.tagline?'<h2 class=\"hand\">'+s.tagline+'</h2>':'';const b=s.byline?'<p class=\"byline\">'+s.byline+'</p>':'';const d=(s.id==='outro'||s.id==='weather')?'':'<hr class=\"dashed\">';return '<article class=\"post-section post-section--'+s.id+'\">'+k+h+b+d+'<div class=\"body\">'+(s.body_html||'')+'</div></article>';};const colNames=['left','center','right','tomorrow'];const colHtml={};colNames.forEach((n)=>{colHtml[n]=sections.filter((s)=>(s.column||'center')===n).map(art).join('');});const css=\":root{--paper:#f1ebd9;--ink:#1a1a1a;--faint:#7a7368;--rule:#b6ab9a;--weather:#d6e7f7;--sticky:#fef4a8;--chip-pink:#f4c4c4;--chip-blue:#c0d8f4;--chip-green:#c8e6c8;}*{box-sizing:border-box;}html,body{margin:0;padding:0;}body{background:var(--paper);color:var(--ink);font-family:'Lora',Georgia,'Times New Roman',serif;font-style:italic;font-size:15px;line-height:1.5;padding:32px 48px 24px;}.masthead{text-align:center;margin-top:4px;}.masthead h1{font-family:'Roboto Slab','Georgia',serif;font-weight:900;font-style:normal;font-size:72px;line-height:1.0;letter-spacing:-0.01em;margin:0;}.masthead .dateline{margin-top:6px;font-style:italic;font-size:14px;color:#2a2a2a;}hr.rule-thin{border:none;border-top:1px solid var(--ink);margin:10px 0 24px;}.columns{display:grid;grid-template-columns:1.5fr 1.25fr 1fr 1fr;gap:36px;}@media (max-width:900px){.columns{grid-template-columns:1fr;gap:24px;}body{padding:24px 22px;font-size:18px;line-height:1.55;}.masthead h1{font-size:40px;}.post-section .body,.post-section--weather .body,.post-section--outro .body{font-size:17px;}.post-section .body .faint{font-size:15px;}.post-section--intro h2.hand{font-size:40px;}.post-section .kicker{font-size:11px;}}.col{min-width:0;}.post-section{margin-bottom:28px;}.post-section .kicker{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint);font-style:normal;margin-bottom:4px;}.post-section h2.hand,.post-section h3.hand{font-family:'Caveat','Comic Sans MS',cursive;font-weight:500;font-style:normal;color:var(--ink);line-height:1.15;margin:0;}.post-section h2.hand{font-size:26px;}.post-section h3.hand{font-size:22px;}.post-section hr.dashed{border:none;border-top:1.5px dashed var(--rule);margin:8px 0 10px;}.post-section .body p{margin:0 0 10px;}.post-section .body p:last-child{margin-bottom:0;}.post-section .body ul{list-style:none;padding:0;margin:0 0 10px;}.post-section .body ul li{padding-left:18px;position:relative;margin-bottom:6px;}.post-section .body ul li::before{content:'→';position:absolute;left:0;top:0;font-style:normal;color:var(--ink);}.post-section .body .faint{color:var(--faint);font-size:13px;}.post-section--intro .kicker::before{content:'↳ ';}.post-section--intro h2.hand{font-size:44px;line-height:1.0;margin-bottom:6px;}.post-section--intro .byline{font-size:13px;color:var(--faint);font-style:italic;margin:4px 0 14px;}.post-section--weather{background:var(--weather);border-radius:4px;padding:12px 14px;}.post-section--weather hr.dashed{display:none;}.post-section--weather h2.hand{font-size:24px;margin-top:2px;}.post-section--weather .body{font-size:14px;margin-top:6px;}.post-section--email h2.hand,.post-section--inbox h2.hand{font-size:22px;}.post-section--events h2.hand{font-size:22px;}.post-section--outro{background:var(--sticky);padding:14px 16px 16px;transform:rotate(-1.2deg);box-shadow:1px 2px 6px rgba(0,0,0,0.06);margin-top:12px;}.post-section--outro .kicker{color:#6a5a00;}.post-section--outro h2.hand{font-size:24px;margin-bottom:4px;}.post-section--outro hr.dashed{display:none;}.post-section--outro .body{font-size:14px;}.post-section .body blockquote.pull{margin:0 0 10px;padding-left:12px;border-left:3px solid var(--rule);font-style:italic;color:#2a2a2a;}.footer{display:flex;justify-content:space-between;margin-top:32px;font-style:italic;font-size:12px;color:var(--faint);}\";const head='<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>The Plannen Post</title><link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"><link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin><link href=\"https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=JetBrains+Mono:wght@500&family=Lora:ital,wght@0,400;1,400;1,500&family=Roboto+Slab:wght@900&display=swap\" rel=\"stylesheet\"><style>'+css+'</style></head><body>';const masthead='<header class=\"masthead\"><h1>THE PLANNEN POST</h1><div class=\"dateline\">'+dateline+'</div></header><hr class=\"rule-thin\">';const foot='<footer class=\"footer\"><span>printed fresh at '+printed+'</span></footer>';const html=head+'<div class=\"dc-card\">'+masthead+'<main class=\"columns\"><div class=\"col col-left\">'+colHtml.left+'</div><div class=\"col col-center\">'+colHtml.center+'</div><div class=\"col col-right\">'+colHtml.right+'</div><div class=\"col col-tomorrow\">'+colHtml.tomorrow+'</div></main>'+foot+'</div></body></html>';const nonEmpty=colNames.filter((n)=>colHtml[n]&&colHtml[n].trim().length>0);const pages=nonEmpty.map((n,i)=>{const top=(i===0?masthead:'');const bot=(i===nonEmpty.length-1?foot:'');return {name:'page'+(i+1),html:head+'<div class=\"dc-card\">'+top+'<main class=\"columns\"><div class=\"col\">'+colHtml[n]+'</div></main>'+bot+'</div></body></html>'};});const subject='The Plannen Post — '+(dateline?dateline.split(' · ').slice(0,2).join(' '):editionDate);return [{json:{html:html,pages:pages,subject:subject,edition_date:editionDate,sidecar_json:JSON.stringify(out.sidecar||{})}}];"
+      },
+      "id": "23511980-5c35-4a62-8d09-3ce79aa84205",
+      "name": "Assemble Edition",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "operation": "create",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.html }}",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "={{ $json.props }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "edfddcb7-5ba3-43fb-b9f4-6bba25e699a0",
+      "name": "Create Gmail Draft",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1472,
+        192
+      ],
+      "webhookId": "322a2b3a-ea89-489b-a98e-b0c924f3f26e",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YPmqhcmJUWL9EuTP",
+          "cachedResultName": "post_memory"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "edition_date",
+              "keyValue": "={{ $json.edition_date }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "edition_date"
+          ],
+          "value": {
+            "edition_date": "={{ $json.edition_date }}",
+            "sidecar": "={{ $json.sidecar_json }}"
+          },
+          "schema": [
+            {
+              "id": "edition_date",
+              "displayName": "edition_date",
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "display": true,
+              "required": false
+            },
+            {
+              "id": "sidecar",
+              "displayName": "sidecar",
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "display": true,
+              "required": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2bdb237b-486c-4888-b4f9-e400f28e1d33",
+      "name": "Write Memory",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1472,
+        384
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://YOUR-PLANNEN-PROJECT.supabase.co/functions/v1/mcp",
+        "authentication": "bearerAuth",
+        "include": "selected",
+        "includeTools": [
+          "get_briefing_context",
+          "get_daily_briefing",
+          "list_events",
+          "get_event",
+          "list_obligations",
+          "list_checklists",
+          "get_checklist",
+          "list_event_memories",
+          "list_event_notes",
+          "get_profile_context",
+          "list_family_members",
+          "get_watch_queue",
+          "list_activity_logs"
+        ],
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "d7f85438-9706-4566-95df-a4ec89139072",
+      "name": "Plannen MCP",
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.3,
+      "position": [
+        448,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://air-quality-api.open-meteo.com/v1/air-quality",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "latitude",
+              "value": "51.03"
+            },
+            {
+              "name": "longitude",
+              "value": "4.48"
+            },
+            {
+              "name": "hourly",
+              "value": "alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,ragweed_pollen"
+            },
+            {
+              "name": "timezone",
+              "value": "Europe/Brussels"
+            },
+            {
+              "name": "forecast_days",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8a464200-6ba4-4425-86fd-3af272fb2ace",
+      "name": "Fetch Pollen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        480
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const w=$('Fetch Weather').item.json;const p=$('Fetch Pollen').item.json;const daily=(w&&w.daily)||{};const hourly=(w&&w.hourly)||{};const med=(arr)=>{const a=arr.filter(v=>v!=null&&!isNaN(v)).map(Number).sort((x,y)=>x-y);if(!a.length)return null;const m=Math.floor(a.length/2);return a.length%2?a[m]:(a[m-1]+a[m])/2;};const r1=(v)=>v==null?null:Math.round(v*10)/10;const dvals=(base,i)=>{const o=[];for(const k in daily){if(k===base||k.indexOf(base+'_')===0){const arr=daily[k];if(Array.isArray(arr)&&arr[i]!=null)o.push(Number(arr[i]));}}return o;};const sky=(c)=>{if(c==null)return 'unknown';c=Math.round(c);if(c===0)return 'clear';if(c<=2)return 'partly cloudy';if(c===3)return 'overcast';if(c>=45&&c<=48)return 'fog';if(c>=51&&c<=67)return 'rain';if(c>=71&&c<=77)return 'snow';if(c>=80&&c<=82)return 'showers';if(c>=95)return 'thunderstorm';return 'mixed';};const t=hourly.time||[];const dates=[];for(let i=0;i<t.length;i++){const dd=t[i].slice(0,10);if(dates.indexOf(dd)<0)dates.push(dd);}const gustOf=(dayDate)=>{const peaks=[];for(const k in hourly){if(k==='wind_gusts_10m'||k.indexOf('wind_gusts_10m_')===0){const arr=hourly[k];let mxx=null;for(let i=0;i<t.length;i++){if(t[i].slice(0,10)===dayDate&&Array.isArray(arr)&&arr[i]!=null){const v=Number(arr[i]);if(mxx==null||v>mxx)mxx=v;}}if(mxx!=null)peaks.push(mxx);}}if(!peaks.length)return null;return {kmh:Math.round(med(peaks)),lo:Math.round(Math.min.apply(null,peaks)),hi:Math.round(Math.max.apply(null,peaks)),models:peaks.length};};const day=(i)=>({high:r1(med(dvals('temperature_2m_max',i))),low:r1(med(dvals('temperature_2m_min',i))),rain:r1(med(dvals('precipitation_probability_max',i))),uv:r1(med(dvals('uv_index_max',i))),sky:sky(med(dvals('weather_code',i))),gust:gustOf(dates[i]||'')});const ph=(p&&p.hourly)||{};const mx=(a)=>Array.isArray(a)?Math.round(a.reduce((m,v)=>(v>m?v:m),0)):null;const pollen={grass:mx(ph.grass_pollen),birch:mx(ph.birch_pollen),alder:mx(ph.alder_pollen),mugwort:mx(ph.mugwort_pollen),ragweed:mx(ph.ragweed_pollen)};return [{json:{location:'Mechelen',consensus:'median of per-model daily-peak gust',today:day(0),tomorrow:day(1),pollen:pollen}}];"
+      },
+      "id": "62a4cbec-e271-44ca-8479-78c9238d31a4",
+      "name": "Digest Weather",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        464
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 25,
+        "filters": {
+          "q": "in:sent newer_than:7d"
+        }
+      },
+      "id": "591337bc-4373-4212-a2e9-de93c341851f",
+      "name": "Fetch Sent Mail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        768
+      ],
+      "webhookId": "674fff1d-d285-4fb0-adaf-acae5b506b64",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "emails",
+        "options": {}
+      },
+      "id": "bea5a66f-57aa-4fa5-bb1a-41b9fc744ab2",
+      "name": "Aggregate Sent",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        448,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Search the live web via Tavily. Provide one focused query string. Returns ranked results (title, url, content). Use for the sport, news, tech and startup feeds.",
+        "method": "POST",
+        "url": "https://api.tavily.com/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ $fromAI('query', 'A focused, self-contained web-search question for one feed') }}"
+            },
+            {
+              "name": "search_depth",
+              "value": "basic"
+            },
+            {
+              "name": "time_range",
+              "value": "week"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 20000
+        },
+        "optimizeResponse": true
+      },
+      "id": "fe9eee05-2b5f-4f8a-adc2-0d3ad5e8d2f3",
+      "name": "Web Search",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        672,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hcti.io/v1/image",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ html: $json.html, viewport_width: 620, viewport_height: 900, device_scale: 2, ms_delay: 600 }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "4fc4f55e-1120-46bd-8385-0a641b78ae5d",
+      "name": "Render PNG",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1248,
+        480
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "d6dbea4a-ac1f-4d46-b40b-a226a9d2c23e",
+      "name": "Fetch PNG",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1456,
+        560
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "pages",
+        "options": {}
+      },
+      "id": "75846d49-4a2f-4c19-ac8e-c30e35293b44",
+      "name": "Split Pages",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1136,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const ins=$input.all();const bin={};const props=[];for(let i=0;i<ins.length;i++){const it=ins[i];if(it.binary&&it.binary.data){const key='p'+(i+1);const meta=Object.assign({},it.binary.data);meta.fileName='post-'+(i+1)+'.png';meta.fileExtension='png';meta.mimeType='image/png';bin[key]=meta;props.push(key);}}const a=$('Assemble Edition').first().json;return [{json:{subject:a.subject,html:a.html,props:props.join(',')},binary:bin}];"
+      },
+      "id": "cf3afd54-6246-451b-acb3-1bd6083f78f5",
+      "name": "Collect Pages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1664,
+        560
+      ]
+    }
+  ],
+  "connections": {
+    "Daily 06:30": {
+      "main": [
+        [
+          {
+            "node": "Fetch Recent Mail",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Weather",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Read Memory",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Sent Mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Recent Mail": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Mail": {
+      "main": [
+        [
+          {
+            "node": "Join Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Join Sources": {
+      "main": [
+        [
+          {
+            "node": "Compose Edition",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compose Edition": {
+      "main": [
+        [
+          {
+            "node": "Assemble Edition",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Opus": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Compose Edition",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assemble Edition": {
+      "main": [
+        [
+          {
+            "node": "Write Memory",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Split Pages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plannen MCP": {
+      "ai_tool": [
+        [
+          {
+            "node": "Compose Edition",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Memory": {
+      "main": [
+        [
+          {
+            "node": "Join Sources",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Fetch Weather": {
+      "main": [
+        [
+          {
+            "node": "Fetch Pollen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Pollen": {
+      "main": [
+        [
+          {
+            "node": "Digest Weather",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Digest Weather": {
+      "main": [
+        [
+          {
+            "node": "Join Sources",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Fetch Sent Mail": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Sent": {
+      "main": [
+        [
+          {
+            "node": "Join Sources",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Web Search": {
+      "ai_tool": [
+        [
+          {
+            "node": "Compose Edition",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render PNG": {
+      "main": [
+        [
+          {
+            "node": "Fetch PNG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Pages": {
+      "main": [
+        [
+          {
+            "node": "Render PNG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch PNG": {
+      "main": [
+        [
+          {
+            "node": "Collect Pages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Pages": {
+      "main": [
+        [
+          {
+            "node": "Create Gmail Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "binaryMode": "separate"
+  }
+}

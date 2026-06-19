@@ -54,3 +54,5 @@ Two small local files drive everything: **`~/.post/config.md`** — the portable
 ---
 
 **Want more?** Run **`/post-help`** in any session for the full guide — sources & sections, scheduling, themes, and troubleshooting — or read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+**Prefer a workflow engine?** [`integrations/n8n/`](integrations/n8n/) ports the same Post to **n8n** — n8n orchestrates the schedule, fetches, and delivery; an LLM still composes the edition. Importable workflow + setup notes included.
